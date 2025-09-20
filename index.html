@@ -379,9 +379,14 @@ if (firstTxISO) {
 }
 
   const pct = posNormalized * 100;
-  // animate timeline elements
+  // Reset to 0 first for animation
+youDot.style.left = '0%';
+timelineProgress.style.width = '0%';
+
+setTimeout(() => {
   youDot.style.left = pct + '%';
   timelineProgress.style.width = pct + '%';
+}, 50);
 
   // ranking: simulate using normalized position
   const totalUsers = DEFAULT_TOTAL_USERS;
