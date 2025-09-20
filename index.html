@@ -1,468 +1,227 @@
-<!--
-File: stacks-og-site/index.html
-Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
--->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>How OG are you (Stacks) — OG Card</title>
-<meta name="description" content="Check your Stacks OG card: transactions, first tx date, join position, export image." />
-
-<!-- html2canvas for export -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
-<style>
-  /* Theme variables */
-  :root{
-    --bg:#071018;
-    --card:#09211a;
-    --accent1:#00f27a;
-    --accent2:#00d4ff;
-    --muted: #8fd8b6;
-    --glass: rgba(255,255,255,0.03);
-    --radius: 18px;
-    --maxw: 420px;
-  }
-  /* Reset */
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    background:
-      linear-gradient(180deg, rgba(0,12,10,0.35), rgba(0,0,0,0.55)),
-      radial-gradient(600px 400px at 10% 10%, rgba(0,212,255,0.04), transparent),
-      var(--bg);
-    color:#e6fff3;
-    -webkit-font-smoothing:antialiased;
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    padding:28px 18px 96px;
-  }
-
-  /* Subtle grid background */
-  body::before{
-    content:"";
-    position:fixed;
-    inset:0;
-    background-image:
-      linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px);
-    background-size: 44px 44px, 44px 44px;
-    opacity:0.12;
-    pointer-events:none;
-  }
-
-  main{ width:100%; max-width:var(--maxw); display:flex; flex-direction:column; gap:18px; align-items:center; }
-
-  /* Header / input area */
-  .hero{
-    text-align:center;
-    margin-top:8px;
-    margin-bottom:2px;
-  }
-  .title{ font-size:1.15rem; font-weight:700; letter-spacing: -0.02em; color:#c9ffe7; }
-  .subtitle{ font-size:0.85rem; color:var(--muted); margin-top:6px; }
-
-  .controls{
-    margin-top:12px;
-    width:100%;
-    display:flex;
-    gap:10px;
-    align-items:center;
-  }
-  .controls input{
-    flex:1;
-    padding:12px 14px;
-    border-radius:12px;
-    border:1px solid rgba(255,255,255,0.04);
-    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
-    color:#e8fff1;
-    font-size:0.95rem;
-  }
-  .controls input::placeholder{ color: rgba(255,255,255,0.28); }
-
-  .btn-check{
-    background: linear-gradient(90deg,var(--accent1), var(--accent2));
-    border:none;
-    color:#02221c;
-    font-weight:800;
-    padding:12px 16px;
-    border-radius:12px;
-    cursor:pointer;
-    box-shadow: 0 8px 30px rgba(0,242,122,0.08);
-  }
-  .btn-check:active{ transform: translateY(1px); }
-  .muted-btn { background: transparent; color: var(--muted); border: 1px solid rgba(255,255,255,0.03); padding:10px 12px; border-radius:10px; font-weight:600; }
-
-  /* Result card */
-  .card {
-    width:100%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.014), rgba(255,255,255,0.008));
-    border-radius: var(--radius);
-    padding:18px;
-    border: 1px solid rgba(0,255,130,0.08);
-    box-shadow: 0 10px 40px rgba(1,6,8,0.6);
-    transform-origin: center top;
-    overflow:hidden;
-  }
-
-  /* Animated header row */
-  .card-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  .card-title{ font-weight:700; font-size:1.05rem; color:#dfffe6; }
-  .avatar {
-    width:56px; height:56px; border-radius:12px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.2));
-    display:flex; align-items:center; justify-content:center;
-    font-size:34px; box-shadow: 0 6px 18px rgba(0,255,130,0.06);
-    position:relative;
-  }
-  /* subtle bounce */
-  .avatar.bounce{ animation: bounce 2.8s infinite; }
-  @keyframes bounce {
-    0%,100%{ transform: translateY(0); }
-    50%{ transform: translateY(-6px); }
-  }
-
-  /* Big numbers */
-  .tx-count{ font-size:2.2rem; font-weight:800; margin:10px 0 4px; color: #edfff2; letter-spacing:-0.01em; }
-  .first-tx{ color:var(--muted); font-size:0.95rem; margin-bottom:18px; }
-
-  /* Timeline */
-  .timeline-wrap{ width:100%; padding:8px 2px 14px; }
-  .timeline {
-    height:10px; background: linear-gradient(90deg, rgba(0,0,0,0.12), rgba(0,0,0,0.06)); border-radius:999px;
-    position:relative; overflow:visible;
-  }
-  .dot { width:12px; height:12px; border-radius:999px; position:absolute; top:50%; transform:translateY(-50%); background: rgba(0,255,130,0.16); border:2px solid rgba(0,255,130,0.26); box-shadow: 0 6px 18px rgba(0,255,120,0.06); }
-  .you-dot { width:16px; height:16px; background: linear-gradient(90deg,var(--accent1),var(--accent2)); border:3px solid rgba(0,20,15,0.12); box-shadow: 0 8px 28px rgba(0,212,255,0.08); transition: left 900ms cubic-bezier(.2,.9,.3,1); }
-  .timeline-progress {
-    position:absolute; left:0; top:0; bottom:0; height:100%; border-radius:999px;
-    background: linear-gradient(90deg, rgba(0,255,130,0.12), rgba(0,212,255,0.06));
-    width:0%;
-    transition: width 900ms cubic-bezier(.2,.9,.3,1);
-  }
-
-  .timeline-labels{ display:flex; justify-content:space-between; margin-top:8px; color:var(--muted); font-size:0.85rem; }
-
-  /* Ranking block */
-  .ranking {
-    margin-top:16px; text-align:center;
-  }
-  .rank-big{ font-weight:900; font-size:1.6rem; margin-bottom:6px; color:#e8ffe7; }
-  .rank-sub{ color:var(--muted); font-size:0.92rem; margin-bottom:12px; }
-
-  /* Export button */
-  .export-wrap{ display:flex; justify-content:center; gap:8px; margin-top:8px; }
-  .btn-export { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); color: var(--accent1); border:1px solid rgba(0,255,130,0.06); padding:10px 14px; border-radius:10px; cursor:pointer; }
-
-  /* Loading overlay + spinner */
-  .overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg, rgba(1,2,3,0.35), rgba(1,2,3,0.35)); border-radius:inherit; }
-  .spinner{
-    width:46px; height:46px; border-radius:50%; border:4px solid rgba(255,255,255,0.06); border-top-color:var(--accent1); animation: spin 1s linear infinite;
-  }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-
-  /* Entrance animation */
-  .card.hidden{ opacity:0; transform: translateY(14px) scale(0.995); pointer-events:none; }
-  .card.show{ opacity:1; transform: translateY(0) scale(1); transition: all 520ms cubic-bezier(.2,.9,.3,1); }
-
-  /* small utility */
-  .muted{ color:var(--muted); font-size:0.86rem; }
-  .err{ color:#ff9b9b; font-weight:700; }
-
-  /* Responsive tweaks */
-  @media (max-width:420px){
-    :root{ --maxw: 380px; }
-    .tx-count{ font-size:1.9rem; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>Stacks OG Score</title>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <style>
+    body {
+      background: #0d0d0d;
+      color: #fff;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding-top: 40px;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: #ff6600;
+      animation: flicker 2s infinite alternate;
+    }
+    @keyframes flicker {
+      0% { text-shadow: 0 0 5px #ff6600; }
+      100% { text-shadow: 0 0 20px #ff6600; }
+    }
+    .input-box {
+      margin-bottom: 20px;
+    }
+    input {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      width: 260px;
+      background: #111;
+      color: #fff;
+    }
+    button {
+      background: #ff6600;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: 8px;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px #ff6600;
+    }
+    .card {
+      background: #111;
+      border: 1px solid #ff6600;
+      border-radius: 14px;
+      padding: 20px;
+      width: 340px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(255,102,0,0.3);
+      margin-top: 20px;
+      display: none;
+      animation: fadeIn 0.6s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .avatar {
+      font-size: 48px;
+      margin: 12px 0;
+      display: inline-block;
+      animation: bounce 1s ease;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+    .progress {
+      width: 100%;
+      height: 10px;
+      background: #222;
+      border-radius: 5px;
+      margin: 18px 0;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #ff6600;
+      width: 0%;
+    }
+    .ranking {
+      margin: 15px 0;
+      font-size: 14px;
+      color: #ddd;
+    }
+    #rankBig {
+      font-size: 22px;
+      color: #ff6600;
+      font-weight: bold;
+    }
+    .btn {
+      background: #ff6600;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 12px;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+    .btn:hover {
+      transform: scale(1.05) rotate(-2deg);
+      box-shadow: 0 0 15px #ff6600;
+    }
+  </style>
 </head>
 <body>
-<main>
-  <div class="hero">
-    <div class="title">How OG are you on Stacks?</div>
-    <div class="subtitle">Paste your address (no wallet required) — results are read-only.</div>
+
+<h1>Stacks OG Score</h1>
+
+<div class="input-box">
+  <input id="addrInput" placeholder="Enter your Stacks address">
+  <button onclick="checkOG()">CHECK</button>
+</div>
+
+<div id="resultCard" class="card">
+  <h3>Your OG Card</h3>
+  <div id="avatar" class="avatar">🔥</div>
+  <p id="txCount"></p>
+  <p id="firstTx"></p>
+  <div class="progress">
+    <div id="progressBar" class="progress-bar"></div>
   </div>
-
-  <div class="controls" role="search" aria-label="Address input">
-    <input id="addrInput" placeholder="Enter your STX address — e.g. SP..." aria-label="Stacks address" />
-    <button id="checkBtn" class="btn-check" aria-controls="resultCard">CHECK</button>
+  <div class="ranking">
+    <p id="rankBig"></p>
+    <p id="rankSub"></p>
+    <p id="beforeAfter"></p>
   </div>
-
-  <div id="errorMsg" class="muted" role="status" aria-live="polite" style="height:18px;"></div>
-
-  <!-- Result card -->
-  <div id="resultCard" class="card hidden" aria-live="polite" style="position:relative;">
-    <div id="overlay" class="overlay" style="display:none;">
-      <div style="text-align:center;">
-        <div class="spinner" role="status" aria-label="Loading"></div>
-        <div style="height:8px"></div>
-        <div class="muted">Fetching chain data…</div>
-      </div>
-    </div>
-
-    <div class="card-head">
-      <div>
-        <div class="card-title">My OG Card</div>
-        <div class="muted" style="font-size:0.82rem; margin-top:2px;">https://0xtimdev.xyz</div>
-      </div>
-      <div class="avatar bounce" id="avatar" title="OG avatar" aria-hidden="true">🐱</div>
-    </div>
-
-    <div style="margin-top:10px;">
-      <div id="txCount" class="tx-count">-- Transactions</div>
-      <div id="firstTx" class="first-tx">First tx: --</div>
-
-      <div class="timeline-wrap">
-        <div class="timeline" id="timeline">
-          <div class="timeline-progress" id="timelineProgress"></div>
-          <div class="dot" style="left:0%;"></div>
-          <div class="you-dot" id="youDot" style="left:12%;"></div>
-          <div class="dot" style="left:100%; transform:translateX(-100%);"></div>
-        </div>
-        <div class="timeline-labels">
-          <div>Launch</div>
-          <div class="muted">You</div>
-          <div>Now</div>
-        </div>
-      </div>
-
-      <div class="ranking">
-        <div class="rank-big" id="rankBig">—</div>
-        <div class="rank-sub" id="rankSub">out of — users</div>
-        <div class="muted" id="beforeAfter" style="font-size:0.9rem;"></div>
-      </div>
-
-      <div class="export-wrap">
-        <button id="exportBtn" class="btn-export">⬆ Export Image</button>
-        <button id="retryBtn" class="muted-btn" style="display:none;">Try another</button>
-      </div>
-    </div>
-  </div>
-
-  <div style="height:22px;"></div>
-  <div class="muted" style="font-size:0.84rem; text-align:center;">Results are read-only — we never request wallet access. Data from Hiro Stacks API.</div>
-</main>
+  <button class="btn" onclick="exportImage()">⬆ Export Image</button>
+</div>
 
 <script>
-/* Why: central app constants */
-const API_BASE = 'https://api.hiro.so/extended/v1/address/';
-const LAUNCH_DATE = new Date('2021-01-14T00:00:00Z'); // project/network launch baseline
-const DEFAULT_TOTAL_USERS = 2197; // for simulated ranking consistent with your screenshot
+async function checkOG() {
+  const addr = document.getElementById("addrInput").value.trim();
+  if (!addr) return alert("Enter a Stacks address");
 
-/* DOM */
-const addrInput = document.getElementById('addrInput');
-const checkBtn = document.getElementById('checkBtn');
-const resultCard = document.getElementById('resultCard');
-const overlay = document.getElementById('overlay');
-const errorMsg = document.getElementById('errorMsg');
-const txCountEl = document.getElementById('txCount');
-const firstTxEl = document.getElementById('firstTx');
-const youDot = document.getElementById('youDot');
-const timelineProgress = document.getElementById('timelineProgress');
-const rankBig = document.getElementById('rankBig');
-const rankSub = document.getElementById('rankSub');
-const beforeAfter = document.getElementById('beforeAfter');
-const exportBtn = document.getElementById('exportBtn');
-const retryBtn = document.getElementById('retryBtn');
+  // Fetch tx metadata
+  const url = `https://api.hiro.so/extended/v1/address/${addr}/transactions?limit=50`;
+  const res = await fetch(url);
+  const data = await res.json();
 
-/* Utilities */
-function isProbablyStacks(addr){
-  if(!addr) return false;
-  return /^S[PT][0-9a-zA-Z]{10,40}$/.test(addr); // quick heuristic (SP or ST prefix)
-}
-function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function fmtDateISO(iso){
-  try{ return new Date(iso).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});}catch(e){ return iso; }
-}
+  const totalTx = data.total || 0;
+  let firstTxDate = "N/A";
+  let firstTxISO = null;
 
-/* Extract timestamp resiliently from tx object */
-function extractTimestamp(tx){
-  // prefer parent header ISO time, then burn_block_time_iso, then receipt_time_iso, fallback to block_time (unix)
-  if(!tx) return null;
-  if(tx.parent_burn_header && tx.parent_burn_header.timestamp_iso) return tx.parent_burn_header.timestamp_iso;
-  if(tx.burn_block_time_iso) return tx.burn_block_time_iso;
-  if(tx.receipt_time_iso) return tx.receipt_time_iso;
-  if(tx.burn_block_time) return new Date(tx.burn_block_time * 1000).toISOString();
-  return null;
-}
-
-/* Fetch minimal meta (total txs) and earliest tx efficiently */
-async function fetchTxMetaAndFirst(address){
-  // 1: fetch minimal to get total
-  const metaUrl = `${API_BASE}${encodeURIComponent(address)}/transactions?limit=1`;
-  const metaResp = await fetch(metaUrl);
-  if(!metaResp.ok) throw new Error('Failed to fetch transactions (meta).');
-  const meta = await metaResp.json();
-  const total = meta.total || 0;
-
-  if(total === 0){
-    return { total:0, firstTxISO: null };
-  }
-  // 2: fetch earliest tx (offset = total - 1)
-  const offset = Math.max(0, total - 1);
-  const earliestUrl = `${API_BASE}${encodeURIComponent(address)}/transactions?limit=1&offset=${offset}`;
-  const earliestResp = await fetch(earliestUrl);
-  if(!earliestResp.ok) throw new Error('Failed to fetch earliest transaction.');
-  const earliest = await earliestResp.json();
-  const txObj = (earliest.results && earliest.results[0]) || null;
-  const firstTxISO = extractTimestamp(txObj);
-  return { total, firstTxISO };
-}
-  
-/* Animation: count up numbers */
-function animateCount(el, from, to, ms=900){
-  const start = performance.now();
-  function step(now){
-    const t = clamp((now - start)/ms, 0,1);
-    const val = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 2))); // ease-out
-    el.textContent = `${val} Transactions`;
-    if(t < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-
-/* Determine score tier (keeps previous mapping) */
-function computeScore(txCount){
-  if(txCount >= 500) return 100;
-  if(txCount >= 200) return 80;
-  if(txCount >= 50) return 50;
-  if(txCount >= 10) return 20;
-  return 5;
-}
-
-/* Render results */
-function renderCard({total, firstTxISO}){
-  // animate card in
-  resultCard.classList.remove('hidden');
-  resultCard.classList.add('show');
-
-  // animate tx count
-  animateCount(txCountEl, 0, total, 900);
-
-  // set first tx string
-  const firstStr = firstTxISO ? fmtDateISO(firstTxISO) : 'N/A';
-  firstTxEl.textContent = `First tx: ${firstStr}`;
-
-  // timeline position: normalized from LAUNCH_DATE to now
-  const now = Date.now();
-  const start = LAUNCH_DATE.getTime();
-  let posNormalized = 0.5; // fallback middle
-  if(firstTxISO){
-    const firstTime = new Date(firstTxISO).getTime();
-    posNormalized = clamp((firstTime - start) / (now - start), 0, 1);
-  } else { posNormalized = 1; }
-
-  const pct = posNormalized * 100;
-  // animate timeline elements
-  youDot.style.left = pct + '%';
-  timelineProgress.style.width = pct + '%';
-
-  // ranking: simulate using normalized position
-  const totalUsers = DEFAULT_TOTAL_USERS;
-  const rank = Math.max(1, Math.min(totalUsers, Math.round((posNormalized) * (totalUsers - 1)) + 1));
-  const before = rank - 1;
-  const after = totalUsers - rank;
-
-  // set ranking text
-  rankBig.textContent = rank + 'th';
-  rankSub.textContent = `out of ${totalUsers} users`;
-  beforeAfter.textContent = `${before} before · ${after} after`;
-
-  // subtle badge color / avatar change depending on score
-  const score = computeScore(total);
-  const avatar = document.getElementById('avatar');
-  if(score >= 80){
-    avatar.style.boxShadow = '0 10px 36px rgba(0,212,255,0.12)';
-    avatar.textContent = '😺';
-  } else if(score >= 50){
-    avatar.textContent = '😸';
-  } else {
-    avatar.textContent = '😺';
+  if (totalTx > 0) {
+    const oldestUrl = `https://api.hiro.so/extended/v1/address/${addr}/transactions?limit=1&offset=${totalTx-1}`;
+    const oldestRes = await fetch(oldestUrl);
+    const oldestData = await oldestRes.json();
+    if (oldestData.results.length > 0) {
+      const ts = oldestData.results[0].burn_block_time_iso;
+      firstTxISO = ts;
+      firstTxDate = new Date(ts).toDateString();
+    }
   }
 
-  // show retry button
-  retryBtn.style.display = 'inline-block';
+  // Call backend for ranking
+  const resp = await fetch('https://stacks-og.vercel.app/api/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      address: addr,
+      firstTxISO: firstTxISO
+    }),
+  });
+  const stats = await resp.json();
+
+  // Update UI
+  document.getElementById("txCount").textContent = `${totalTx} Transactions`;
+  document.getElementById("firstTx").textContent = `First tx: ${firstTxDate}`;
+
+  const progressBar = document.getElementById("progressBar");
+  progressBar.style.width = "0%"; // reset
+  setTimeout(() => {
+    progressBar.style.transition = "width 1.5s ease";
+    progressBar.style.width = `${(stats.rank / stats.total) * 100}%`;
+  }, 100);
+
+  document.getElementById("rankBig").textContent = `${stats.rank}th`;
+  document.getElementById("rankSub").textContent = `out of ${stats.total} users`;
+  document.getElementById("beforeAfter").textContent = `${stats.before} before · ${stats.after} after`;
+
+  const card = document.getElementById("resultCard");
+  card.style.display = "block";
+
+  // bounce avatar each time
+  const avatar = document.getElementById("avatar");
+  avatar.style.animation = "none";
+  avatar.offsetHeight; // trigger reflow
+  avatar.style.animation = "bounce 1s ease";
+
+  // 🎉 Confetti burst
+  confetti({
+    particleCount: 150,
+    spread: 70,
+    origin: { y: 0.6 }
+  });
 }
 
-/* UI state helpers */
-function setLoading(on){
-  overlay.style.display = on ? 'flex' : 'none';
-  checkBtn.disabled = on;
-  addrInput.disabled = on;
+function exportImage() {
+  const card = document.getElementById("resultCard");
+  html2canvas(card).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "stacks-og-card.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
 }
-function setError(msg){
-  errorMsg.textContent = msg || '';
-}
-
-/* Main flow */
-checkBtn.addEventListener('click', async () => {
-  const addr = addrInput.value.trim();
-  setError('');
-  // quick validation
-  if(!isProbablyStacks(addr)){
-    setError('Enter a valid STX address (starts with SP or ST).');
-    return;
-  }
-
-  // hide old results
-  resultCard.classList.remove('show');
-  resultCard.classList.add('hidden');
-
-  setLoading(true);
-
-  try{
-    const meta = await fetchTxMetaAndFirst(addr);
-    renderCard(meta);
-  }catch(err){
-    console.error(err);
-    setError('Unable to fetch data. Try again later or check the address.');
-  } finally {
-    setLoading(false);
-  }
-});
-
-/* Retry button */
-retryBtn.addEventListener('click', () => {
-  resultCard.classList.remove('show');
-  resultCard.classList.add('hidden');
-  retryBtn.style.display = 'none';
-  addrInput.focus();
-});
-
-/* Export image */
-exportBtn.addEventListener('click', async () => {
-  exportBtn.disabled = true;
-  exportBtn.textContent = 'Preparing…';
-  // clone card visually (to remove overlay if any) and export visually accurate result
-  try{
-    await html2canvas(resultCard, { backgroundColor: null, scale: window.devicePixelRatio || 2 }).then(canvas => {
-      const link = document.createElement('a');
-      link.download = `og-card-${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    });
-  }catch(e){
-    console.error(e);
-    setError('Export failed. Try again.');
-  }finally{
-    exportBtn.disabled = false;
-    exportBtn.textContent = '⬆ Export Image';
-  }
-});
-
-/* Allow Enter key to trigger */
-addrInput.addEventListener('keydown', (e) => {
-  if(e.key === 'Enter') checkBtn.click();
-});
-
-/* Prefill sample address for easy testing (optional) */
-addrInput.placeholder = 'e.g. SP2J... (paste a Stacks address)';
-
 </script>
+
 </body>
 </html>
