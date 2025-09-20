@@ -291,6 +291,23 @@ function extractTimestamp(tx){
   return null;
 }
 
+  /* Fetch global chain data: first ever tx and latest tx */
+async function fetchGlobalTxRange() {
+  const firstUrl = 'https://api.hiro.so/extended/v1/tx?limit=1&order_by=block_height.asc';
+  const latestUrl = 'https://api.hiro.so/extended/v1/tx?limit=1&order_by=block_height.desc';
+
+  const [firstRes, latestRes] = await Promise.all([fetch(firstUrl), fetch(latestUrl)]);
+  if (!firstRes.ok || !latestRes.ok) throw new Error('Failed to fetch global chain range.');
+
+  const firstData = await firstRes.json();
+  const latestData = await latestRes.json();
+
+  return {
+    launchISO: extractTimestamp(firstData.results[0]),
+    nowISO: extractTimestamp(latestData.results[0]),
+  };
+}
+
 /* Fetch minimal meta (total txs) and earliest tx efficiently */
 async function fetchTxMetaAndFirst(address){
   // 1: fetch minimal to get total
@@ -349,13 +366,16 @@ function renderCard({total, firstTxISO}){
   firstTxEl.textContent = `First tx: ${firstStr}`;
 
   // timeline position: normalized from LAUNCH_DATE to now
-  const now = Date.now();
-  const start = LAUNCH_DATE.getTime();
-  let posNormalized = 0.5; // fallback middle
-  if(firstTxISO){
-    const firstTime = new Date(firstTxISO).getTime();
-    posNormalized = clamp((firstTime - start) / (now - start), 0, 1);
-  } else { posNormalized = 1; }
+  const launchTime = new Date(window.globalLaunchISO).getTime();
+const nowTime = new Date(window.globalNowISO).getTime();
+
+let posNormalized = 0.5;
+if (firstTxISO) {
+  const userFirstTime = new Date(firstTxISO).getTime();
+  posNormalized = clamp((userFirstTime - launchTime) / (nowTime - launchTime), 0, 1);
+} else {
+  posNormalized = 1;
+}
 
   const pct = posNormalized * 100;
   // animate timeline elements
@@ -415,10 +435,16 @@ checkBtn.addEventListener('click', async () => {
 
   setLoading(true);
 
-  try{
-    const meta = await fetchTxMetaAndFirst(addr);
-    renderCard(meta);
-  }catch(err){
+  try {
+  // Fetch first + latest tx for the whole network
+  const globalRange = await fetchGlobalTxRange();
+  window.globalLaunchISO = globalRange.launchISO;
+  window.globalNowISO = globalRange.nowISO;
+
+  // Fetch user's data
+  const meta = await fetchTxMetaAndFirst(addr);
+  renderCard(meta);
+} catch (err) {
     console.error(err);
     setError('Unable to fetch data. Try again later or check the address.');
   } finally {
