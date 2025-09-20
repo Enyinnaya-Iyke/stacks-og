@@ -235,6 +235,7 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
         <div class="rank-big" id="rankBig">—</div>
         <div class="rank-sub" id="rankSub">out of — users</div>
         <div class="muted" id="beforeAfter" style="font-size:0.9rem;"></div>
+        <div class="muted" id="avatarLabel" style="font-size:0.92rem; margin-top:10px;"></div>
       </div>
 
       <div class="export-wrap">
@@ -353,6 +354,14 @@ function computeScore(txCount){
   return 5;
 }
 
+function selectAvatar(score){
+  if(score >= 100) return { emoji: "🦁", label: "Apex OG — top of the chain!" };
+  if(score >= 80)  return { emoji: "🐯", label: "Elite OG — fierce and early." };
+  if(score >= 50)  return { emoji: "🐱", label: "Solid OG — steady and loyal." };
+  if(score >= 20)  return { emoji: "😺", label: "Starter OG — finding your paws." };
+  return { emoji: "🐾", label: "Newbie OG — just starting the journey." };
+}
+
 /* Render results */
 function renderCard({total, firstTxISO}){
   // animate card in
@@ -406,15 +415,17 @@ rankBig.textContent = ordinal(rank);
 
   // subtle badge color / avatar change depending on score
   const score = computeScore(total);
-  const avatar = document.getElementById('avatar');
-  if(score >= 80){
-    avatar.style.boxShadow = '0 10px 36px rgba(0,212,255,0.12)';
-    avatar.textContent = '😺';
-  } else if(score >= 50){
-    avatar.textContent = '😸';
-  } else {
-    avatar.textContent = '😺';
-  }
+const avatarData = selectAvatar(score);
+
+const avatar = document.getElementById('avatar');
+const avatarLabel = document.getElementById('avatarLabel');
+avatar.textContent = avatarData.emoji;
+avatarLabel.textContent = avatarData.label;
+
+avatar.style.boxShadow = score >= 80
+  ? '0 10px 36px rgba(0,212,255,0.18)'
+  : '0 6px 18px rgba(0,255,130,0.06)';
+
 
   // show retry button
   retryBtn.style.display = 'inline-block';
