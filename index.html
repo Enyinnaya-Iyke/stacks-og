@@ -395,7 +395,12 @@ setTimeout(() => {
   const after = totalUsers - rank;
 
   // set ranking text
-  rankBig.textContent = rank + 'th';
+  function ordinal(n){
+  const s = ["th","st","nd","rd"], v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+rankBig.textContent = ordinal(rank);
+
   rankSub.textContent = `out of ${totalUsers} users`;
   beforeAfter.textContent = `${before} before · ${after} after`;
 
