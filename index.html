@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>How OG are you on Stacks?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    /* minimal styles, similar to previous version */
+    body { background:#0f1724; color:white; font-family: Arial, sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; padding:20px; }
+    .container { text-align:center; max-width:480px; }
+    input { width:100%; padding:12px; border-radius:6px; border:1px solid #555; margin-bottom:12px; font-size:1rem; }
+    button { padding:12px 24px; font-size:1rem; border:none; border-radius:6px; cursor:pointer; background:#7c5cff; color:#061123; }
+    button:disabled { opacity:0.6; cursor: not-allowed; }
+    .result { margin-top:24px; }
+    .badge { font-size:2rem; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>How OG are you (Stacks)?</h1>
+    <input type="text" id="addrInput" placeholder="Enter your STX address, e.g. SP...">
+    <button id="checkBtn">CHECK</button>
+    <div class="result" id="resultDiv" style="display:none;">
+      <div class="badge" id="scoreBadge">--%</div>
+      <div id="scoreMsg"></div>
+      <div id="firstTx">OG since: --</div>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = "https://api.hiro.so/extended/v1/address/";
+    const btn = document.getElementById("checkBtn");
+    const addrInput = document.getElementById("addrInput");
+    const resultDiv = document.getElementById("resultDiv");
+    const scoreBadge = document.getElementById("scoreBadge");
+    const scoreMsg = document.getElementById("scoreMsg");
+    const firstTxDiv = document.getElementById("firstTx");
+
+    async function fetchAllTx(address) {
+      const limit = 50;
+      let offset = 0;
+      let allTx = [];
+      let keepGoing = true;
+
+      while (keepGoing) {
+        const url = `${apiBase}${address}/transactions_with_transfers?limit=${limit}&offset=${offset}`;
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          throw new Error("Failed to fetch transactions");
+        }
+        const data = await resp.json();
+        const txs = data.results;
+        allTx = allTx.concat(txs);
+
+        if (txs.length < limit) {
+          keepGoing = false;
+        } else {
+          offset += limit;
+          // Optional: stop early if you just need earliest tx + count up to some max
+        }
+      }
+      return allTx;
+    }
+
+    function computeScore(txCount) {
+      if (txCount >= 500) return 100;
+      if (txCount >= 200) return 80;
+      if (txCount >= 50) return 50;
+      if (txCount >= 10) return 20;
+      return 5;
+    }
+
+    btn.addEventListener("click", async () => {
+      const address = addrInput.value.trim();
+      if (!address) return;
+      btn.disabled = true;
+      scoreMsg.textContent = "Loading...";
+      resultDiv.style.display = "block";
+
+      try {
+        const txs = await fetchAllTx(address);
+        const txCount = txs.length;
+
+        if (txCount === 0) {
+          scoreBadge.textContent = "0%";
+          scoreMsg.textContent = "No transactions found — brand new OG?";
+          firstTxDiv.textContent = "OG since: N/A";
+        } else {
+          // sort by block height or by timestamp
+          txs.sort((a, b) => {
+            // if timestamp available
+            const ta = new Date(a.parent_burn_header?.timestamp_iso || a.burn_block_time_iso || a.receipt_time_iso || a.burn_block_time || 0);
+            const tb = new Date(b.parent_burn_header?.timestamp_iso || b.burn_block_time_iso || b.receipt_time_iso || b.burn_block_time || 0);
+            return ta - tb;
+          });
+          const firstTx = txs[0];
+          const firstDate = firstTx.parent_burn_header?.timestamp_iso 
+                            || firstTx.burn_block_time_iso 
+                            || firstTx.receipt_time_iso 
+                            || firstTx.burn_block_time;
+          const dateStr = firstDate ? new Date(firstDate).toISOString().split('T')[0] : "Unknown";
+
+          const score = computeScore(txCount);
+          scoreBadge.textContent = `${score}%`;
+          scoreMsg.textContent = `Based on ${txCount} transaction(s) on Stacks`;
+          firstTxDiv.textContent = `OG since: ${dateStr}`;
+        }
+      } catch (err) {
+        scoreMsg.textContent = "Error fetching data. Maybe address invalid or API issue.";
+        scoreBadge.textContent = "--%";
+        firstTxDiv.textContent = "OG since: --";
+        console.error(err);
+      }
+
+      btn.disabled = false;
+    });
+  </script>
+</body>
+</html>
