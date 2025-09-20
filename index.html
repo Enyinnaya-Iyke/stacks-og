@@ -302,6 +302,8 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
 </div>
 </main>
 <script>
+window.localUserCount = 0; // total addresses entered
+window.enteredAddresses = new Set(); // to avoid counting duplicates
 /* Central app constants */
 const API_BASE = 'https://api.hiro.so/extended/v1/address/';
 const LAUNCH_DATE = new Date('2021-01-14T00:00:00Z'); // network launch baseline
@@ -373,11 +375,12 @@ async function fetchTxMetaAndFirst(address){
 }
 
 /* Fetch total users dynamically */
-async function fetchTotalUsers() {
-  const res = await fetch('https://api.hiro.so/extended/v1/addresses?limit=1'); 
-  if(!res.ok) return 2000; // fallback
-  const data = await res.json();
-  return data.total || 2000;
+async function fetchTotalUsers(address) {
+  if(address && !window.enteredAddresses.has(address)) {
+    window.enteredAddresses.add(address);
+    window.localUserCount++;
+  }
+  return window.localUserCount;
 }
 
 /* Animate transaction count */
@@ -433,7 +436,7 @@ async function renderCard({total, firstTxISO}){
   }, 50);
 
   /* Ranking */
-  const totalUsers = await fetchTotalUsers();
+  const totalUsers = await fetchTotalUsers(addrInput.value.trim());
   const rank = Math.max(1, Math.min(totalUsers, Math.round(posNormalized * (totalUsers - 1)) + 1));
   const before = rank - 1;
   const after = totalUsers - rank;
