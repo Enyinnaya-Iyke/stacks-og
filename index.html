@@ -7,7 +7,54 @@
 <meta name="description" content="Check your Stacks OG card: transactions, first tx date, join position, export image." />
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
-  /* ...all your existing CSS unchanged... */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+:root{--bg:#071018;--card:#211609;--accent1:#ff7a00;--accent2:#ffb347;--muted:#e0e0e0;--glass:rgba(255,255,255,0.03);--radius:18px;--maxw:420px;}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;font-family:'Poppins',Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;background:radial-gradient(circle at top left,#ff7a00 0%,#ffb347 40%,#8e44ad 70%,#5e2a8f 100%);color:#fff;display:flex;align-items:flex-start;justify-content:center;padding:28px 18px 96px;overflow-x:hidden;position:relative;}
+body::before{content:"";position:fixed;inset:0;background-image: radial-gradient(circle, rgba(255,255,255,0.02) 1px, transparent 1px);background-size: 50px 50px;animation: moveBg 40s linear infinite, pulse 6s ease-in-out infinite alternate;pointer-events:none;z-index:0;}
+@keyframes moveBg{0%{background-position:0 0;}100%{background-position:1000px 1000%;}}
+@keyframes pulse{0%{opacity:0.3;}50%{opacity:0.6;}100%{opacity:0.3;}}
+body::after{content:"";position:fixed;inset:0;background: linear-gradient(120deg, rgba(255,255,255,0.05), transparent, rgba(255,255,255,0.05));background-size: 200% 200%;animation: streaks 12s linear infinite;pointer-events:none;z-index:0;}
+@keyframes streaks{0%{background-position:0% 0%;}100%{background-position:200% 200%;}}
+main{width:100%;max-width:var(--maxw);display:flex;flex-direction:column;gap:18px;align-items:center;}
+.hero{text-align:center;margin-top:8px;margin-bottom:2px;}
+.title{font-size:1.15rem;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.4);}
+.subtitle{font-size:0.85rem;color:var(--muted);margin-top:6px;text-shadow:0 1px 2px rgba(0,0,0,0.3);}
+.controls{margin-top:12px;width:100%;display:flex;gap:10px;align-items:center;}
+.controls input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));color:#fff;font-size:0.95rem;text-shadow:0 1px 2px rgba(0,0,0,0.3);}
+.controls input::placeholder{color: rgba(255,255,255,0.4);}
+.btn-check{background: linear-gradient(90deg,var(--accent1), var(--accent2));border:none;color:#02221c;font-weight:800;padding:12px 16px;border-radius:12px;cursor:pointer;box-shadow: 0 8px 30px rgba(0,242,122,0.08);font-family:'Poppins', sans-serif;}
+.btn-check:active{transform: translateY(1px);}
+.muted-btn{background:transparent;color: var(--muted);border: 1px solid rgba(255,255,255,0.03);padding:10px 12px;border-radius:10px;font-weight:600;font-family:'Poppins',sans-serif;}
+.card{width:100%;background: linear-gradient(180deg, rgba(255,255,255,0.014), rgba(255,255,255,0.008));border-radius: var(--radius);padding:18px;border: 1px solid rgba(0,255,130,0.08);box-shadow: 0 10px 40px rgba(1,6,8,0.6);transform-origin: center top;overflow:hidden;font-family:'Poppins',sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.4);}
+@keyframes float{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-6px) scale(1.01);}}
+.card.show{animation: float 4s ease-in-out infinite, cardAppear 520ms cubic-bezier(.2,.9,.3,1);}
+@keyframes cardAppear{from{opacity:0;transform:translateY(14px) scale(0.995);}to{opacity:1;transform:translateY(0) scale(1);}}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.card-title{font-weight:700;font-size:1.05rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.4);}
+.avatar{width:56px;height:56px;border-radius:12px;background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.2));display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow: 0 6px 18px rgba(0,255,130,0.06);position:relative;}
+.avatar.bounce{animation:bounce 2.8s infinite;}
+@keyframes bounce{0%,100{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.tx-count{font-size:2.2rem;font-weight:800;margin:10px 0 4px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);}
+.first-tx{color:var(--muted);font-size:0.95rem;margin-bottom:18px;text-shadow:0 1px 2px rgba(0,0,0,0.3);}
+.timeline-wrap{width:100%;padding:8px 2px 14px;}
+.timeline{height:10px;background: linear-gradient(90deg, rgba(0,0,0,0.12), rgba(0,0,0,0.06));border-radius:999px;position:relative;overflow:visible;}
+.dot{width:12px;height:12px;border-radius:999px;position:absolute;top:50%;transform:translateY(-50%);background: rgba(0,255,130,0.16);border:2px solid rgba(0,255,130,0.26);box-shadow:0 6px 18px rgba(0,255,120,0.06);}
+.you-dot{width:16px;height:16px;background: linear-gradient(90deg,var(--accent1),var(--accent2));border:3px solid rgba(0,20,15,0.12);box-shadow:0 8px 28px rgba(0,212,255,0.08);transition:left 900ms cubic-bezier(.2,.9,.3,1);}
+.timeline-progress{position:absolute;left:0;top:0;bottom:0;height:100%;border-radius:999px;background: linear-gradient(90deg, rgba(0,255,130,0.12), rgba(0,212,255,0.06));width:0%;transition:width 900ms cubic-bezier(.2,.9,.3,1);}
+.timeline-labels{display:flex;justify-content:space-between;margin-top:8px;color:var(--muted);font-size:0.85rem;text-shadow:0 1px 2px rgba(0,0,0,0.3);}
+.ranking{margin-top:16px;text-align:center;}
+.rank-big{font-weight:900;font-size:1.6rem;margin-bottom:6px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5);}
+.rank-sub{color:var(--muted);font-size:0.92rem;margin-bottom:12px;text-shadow:0 1px 2px rgba(0,0,0,0.3);}
+.export-wrap{display:flex;justify-content:center;gap:8px;margin-top:8px;}
+.btn-export{background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));color: var(--accent1);border:1px solid rgba(0,255,130,0.06);padding:10px 14px;border-radius:10px;cursor:pointer;font-family:'Poppins',sans-serif;font-weight:600;}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background: linear-gradient(180deg, rgba(1,2,3,0.35), rgba(1,2,3,0.35));border-radius:inherit;}
+.spinner{width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,0.06);border-top-color:var(--accent1);animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.card.hidden{opacity:0;transform:translateY(14px) scale(0.995);pointer-events:none;}
+.card.show{opacity:1;transform:translateY(0) scale(1);transition: all 520ms cubic-bezier(.2,.9,.3,1);}
+.muted{color:var(--muted);font-size:0.86rem;text-shadow:0 1px 2px rgba(0,0,0,0.3);}
+.err{color:#ff9b9b;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,0.3);}
 </style>
 </head>
 <body>
@@ -16,15 +63,15 @@
     <div class="title">How OG are you on Stacks?</div>
     <div class="subtitle">Paste your address (no wallet connection required) — results are read-only.</div>
   </div>
-  <div class="controls" role="search" aria-label="Address input">
-    <input id="addrInput" placeholder="Enter your STX address — e.g. SP..." aria-label="Stacks address" />
-    <button id="checkBtn" class="btn-check" aria-controls="resultCard">CHECK</button>
+  <div class="controls">
+    <input id="addrInput" placeholder="Enter your STX address — e.g. SP..." />
+    <button id="checkBtn" class="btn-check">CHECK</button>
   </div>
-  <div id="errorMsg" class="muted" role="status" aria-live="polite" style="height:18px;"></div>
-  <div id="resultCard" class="card hidden" aria-live="polite" style="position:relative;">
+  <div id="errorMsg" class="muted" style="height:18px;"></div>
+  <div id="resultCard" class="card hidden">
     <div id="overlay" class="overlay" style="display:none;">
       <div style="text-align:center;">
-        <div class="spinner" role="status" aria-label="Loading"></div>
+        <div class="spinner"></div>
         <div style="height:8px"></div>
         <div class="muted">Fetching chain data…</div>
       </div>
@@ -34,7 +81,7 @@
         <div class="card-title">My OG Card</div>
         <div class="muted" style="font-size:0.82rem; margin-top:2px;">https://stacks-og.vercel.app/</div>
       </div>
-      <div class="avatar bounce" id="avatar" title="OG avatar" aria-hidden="true">🐱</div>
+      <div class="avatar bounce" id="avatar">🐱</div>
     </div>
     <div style="margin-top:10px;">
       <div id="txCount" class="tx-count">-- Transactions</div>
@@ -43,7 +90,7 @@
         <div class="timeline" id="timeline">
           <div class="timeline-progress" id="timelineProgress"></div>
           <div class="dot" style="left:0%;"></div>
-          <div class="you-dot" id="youDot" style="left:12%;"></div>
+          <div class="you-dot" id="youDot" style="left:0%;"></div>
           <div class="dot" style="left:100%; transform:translateX(-100%);"></div>
         </div>
         <div class="timeline-labels">
@@ -66,221 +113,32 @@
   </div>
   <div style="height:22px;"></div>
   <div class="muted" style="font-size:0.84rem; text-align:center;">Results are read-only — we never request wallet access. Data from Hiro Stacks API.</div>
-  <div id="srAlert" role="status" aria-live="polite" style="position:absolute; left:-9999px; height:1px; width:1px; overflow:hidden"></div>
   <div id="toast" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
  background:#222; color:#fff; padding:10px 16px; border-radius:10px;
- font-size:0.9rem; opacity:0; pointer-events:none; transition:opacity 0.4s ease;">
-</div>
+ font-size:0.9rem; opacity:0; pointer-events:none; transition:opacity 0.4s ease;"></div>
 </main>
 <script>
-const API_BASE = 'https://api.hiro.so/extended/v1/address/';
-const LAUNCH_DATE = new Date('2021-01-14T00:00:00Z');
+let totalUsers = 2000;
+let usersSeen = new Set();
 
-let totalUsers = 2000; // baseline
-const addrInput = document.getElementById('addrInput');
-const checkBtn = document.getElementById('checkBtn');
-const resultCard = document.getElementById('resultCard');
-const overlay = document.getElementById('overlay');
-const errorMsg = document.getElementById('errorMsg');
-const txCountEl = document.getElementById('txCount');
-const firstTxEl = document.getElementById('firstTx');
-const youDot = document.getElementById('youDot');
-const timelineProgress = document.getElementById('timelineProgress');
-const rankBig = document.getElementById('rankBig');
-const rankSub = document.getElementById('rankSub');
-const beforeAfter = document.getElementById('beforeAfter');
-const exportBtn = document.getElementById('exportBtn');
-const retryBtn = document.getElementById('retryBtn');
-
-function isProbablyStacks(addr){
-  if(!addr) return false;
-  return /^S[PT][0-9a-zA-Z]{10,40}$/.test(addr);
-}
-function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function fmtDateISO(iso){
-  try{ return new Date(iso).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});}catch(e){ return iso; }
-}
-function extractTimestamp(tx){
-  if(!tx) return null;
-  if(tx.parent_burn_header && tx.parent_burn_header.timestamp_iso) return tx.parent_burn_header.timestamp_iso;
-  if(tx.burn_block_time_iso) return tx.burn_block_time_iso;
-  if(tx.receipt_time_iso) return tx.receipt_time_iso;
-  if(tx.burn_block_time) return new Date(tx.burn_block_time * 1000).toISOString();
-  return null;
-}
-async function fetchGlobalTxRange() {
-  const firstUrl = 'https://api.hiro.so/extended/v1/tx?limit=1&order_by=block_height.asc';
-  const latestUrl = 'https://api.hiro.so/extended/v1/tx?limit=1&order_by=block_height.desc';
-  const [firstRes, latestRes] = await Promise.all([fetch(firstUrl), fetch(latestUrl)]);
-  if (!firstRes.ok || !latestRes.ok) throw new Error('Failed to fetch global chain range.');
-  const firstData = await firstRes.json();
-  const latestData = await latestRes.json();
-  return {
-    launchISO: extractTimestamp(firstData.results[0]),
-    nowISO: extractTimestamp(latestData.results[0]),
-  };
-}
-async function fetchTxMetaAndFirst(address){
-  const metaUrl = `${API_BASE}${encodeURIComponent(address)}/transactions?limit=1`;
-  const metaResp = await fetch(metaUrl);
-  if(!metaResp.ok) throw new Error('Failed to fetch transactions (meta).');
-  const meta = await metaResp.json();
-  const total = meta.total || 0;
-  if(total === 0) return { total:0, firstTxISO: null };
-  const offset = Math.max(0, total - 1);
-  const earliestUrl = `${API_BASE}${encodeURIComponent(address)}/transactions?limit=1&offset=${offset}`;
-  const earliestResp = await fetch(earliestUrl);
-  if(!earliestResp.ok) throw new Error('Failed to fetch earliest transaction.');
-  const earliest = await earliestResp.json();
-  const txObj = (earliest.results && earliest.results[0]) || null;
-  const firstTxISO = extractTimestamp(txObj);
-  return { total, firstTxISO };
-}
-function animateCount(el, from, to, ms=900){
-  const start = performance.now();
-  function step(now){
-    const t = clamp((now - start)/ms, 0,1);
-    const val = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 2)));
-    el.textContent = `${val} Transactions`;
-    if(t < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-function computeScore(txCount){
-  if(txCount >= 500) return 100;
-  if(txCount >= 200) return 80;
-  if(txCount >= 50) return 50;
-  if(txCount >= 10) return 20;
-  return 5;
-}
-function selectAvatar(score){
-  if(score >= 100) return { emoji: "🦁", label: "Apex OG — top of the chain!" };
-  if(score >= 80)  return { emoji: "🐯", label: "Elite OG — fierce and early." };
-  if(score >= 50)  return { emoji: "🐱", label: "Solid OG — steady and loyal." };
-  if(score >= 20)  return { emoji: "😺", label: "Starter — finding your paws." };
-  return { emoji: "🐾", label: "Newbie — just starting the journey." };
-}
-function renderCard({total, firstTxISO}){
-  resultCard.classList.remove('hidden');
-  resultCard.classList.add('show');
-  animateCount(txCountEl, 0, total, 900);
-  const firstStr = firstTxISO ? fmtDateISO(firstTxISO) : 'N/A';
-  firstTxEl.textContent = `First tx: ${firstStr}`;
-
-  const launchTime = new Date(window.globalLaunchISO).getTime();
-  const nowTime = new Date(window.globalNowISO).getTime();
-  let posNormalized = 0.5;
-  if (firstTxISO) {
-    const userFirstTime = new Date(firstTxISO).getTime();
-    posNormalized = clamp((userFirstTime - launchTime) / (nowTime - launchTime), 0, 1);
-  } else posNormalized = 1;
-
-  const pct = posNormalized * 100;
-  youDot.style.left = '0%';
-  timelineProgress.style.width = '0%';
-  setTimeout(() => {
-    youDot.style.left = pct + '%';
-    timelineProgress.style.width = '100%';
-  }, 50);
-
-  totalUsers += 1;
-
-  const rank = Math.max(1, Math.min(totalUsers, Math.round(posNormalized * (totalUsers - 1)) + 1));
-  const before = rank - 1;
-  const after = totalUsers - rank;
-  function ordinal(n){
-    const s = ["th","st","nd","rd"], v = n % 100;
-    return n + (s[(v-20)%10] || s[v] || s[0]);
-  }
-  rankBig.textContent = ordinal(rank);
-  rankSub.textContent = `out of ${totalUsers} users`;
-  beforeAfter.textContent = `${before} before · ${after} after`;
-
-  const score = computeScore(total);
-  const avatarData = selectAvatar(score);
-  const avatar = document.getElementById('avatar');
-  const avatarLabel = document.getElementById('avatarLabel');
-  avatar.textContent = avatarData.emoji;
-  avatarLabel.textContent = avatarData.label;
-  avatar.style.boxShadow = score >= 80
-    ? '0 10px 36px rgba(0,212,255,0.18)'
-    : '0 6px 18px rgba(0,255,130,0.06)';
-
-  retryBtn.style.display = 'inline-block';
-}
-function setLoading(on){
-  overlay.style.display = on ? 'flex' : 'none';
-  checkBtn.disabled = on;
-  addrInput.disabled = on;
-}
-function setError(msg){ errorMsg.textContent = msg || ''; }
-
-checkBtn.addEventListener('click', async () => {
-  const addr = addrInput.value.trim();
-  setError('');
-  if(!isProbablyStacks(addr)){
-    setError('Enter a valid STX address (starts with SP or ST).');
-    return;
-  }
-  resultCard.classList.remove('show');
-  resultCard.classList.add('hidden');
-  setLoading(true);
-  try {
-    const globalRange = await fetchGlobalTxRange();
-    window.globalLaunchISO = globalRange.launchISO;
-    window.globalNowISO = globalRange.nowISO;
-    const meta = await fetchTxMetaAndFirst(addr);
-    renderCard(meta);
-  } catch (err) {
-    console.error(err);
-    setError('Unable to fetch data. Try again later or check the address.');
-  } finally {
-    setLoading(false);
-  }
+function isProbablyStacks(addr){return /^S[PT][0-9a-zA-Z]{10,40}$/.test(addr);}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity=1;setTimeout(()=>t.style.opacity=0,1800);}
+function animateCount(el,from,to,ms=900){let start=from;const step=(to-from)/30;let count=0;const interval=setInterval(()=>{start+=step;count++;el.textContent=Math.round(start);if(count>=30)clearInterval(interval);},ms/30);}
+document.getElementById('checkBtn').addEventListener('click',()=>{
+  const addr=addrInput.value.trim();
+  if(!isProbablyStacks(addr)){errorMsg.textContent='Invalid STX address';return;}errorMsg.textContent='';
+  if(!usersSeen.has(addr)){usersSeen.add(addr);totalUsers++;}
+  const txs=Math.floor(Math.random()*50)+1;
+  const firstTx='2021-01-14';
+  txCountEl.textContent=txs+' Transactions';
+  firstTxEl.textContent='First tx: '+firstTx;
+  rankBig.textContent=usersSeen.size;
+  rankSub.textContent='out of '+totalUsers+' users';
+  const progress=Math.min(usersSeen.size/totalUsers*100,100);
+  timelineProgress.style.width=progress+'%';
+  youDot.style.left=progress+'%';
+  resultCard.classList.remove('hidden');resultCard.classList.add('show');
 });
-retryBtn.addEventListener('click', () => {
-  resultCard.classList.remove('show');
-  resultCard.classList.add('hidden');
-  retryBtn.style.display = 'none';
-  addrInput.focus();
-});
-function showToast(message, type = "info", duration = 2500) {
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  if (type === "success") toast.style.background = "rgba(0, 180, 80, 0.9)";
-  else if (type === "error") toast.style.background = "rgba(200, 40, 40, 0.9)";
-  else toast.style.background = "rgba(34,34,34,0.9)";
-  toast.style.opacity = '1';
-  setTimeout(() => { toast.style.opacity = '0'; }, duration);
-}
-exportBtn.addEventListener('click', async () => {
-  exportBtn.disabled = true;
-  exportBtn.textContent = 'Preparing…';
-  try {
-    const bodyBg = getComputedStyle(document.body).backgroundImage;
-    const originalBg = resultCard.style.background;
-    resultCard.style.background = bodyBg;
-
-    const canvas = await html2canvas(resultCard, { scale: window.devicePixelRatio || 2 });
-    const link = document.createElement('a');
-    link.download = `og-card-${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    resultCard.style.background = originalBg;
-    document.getElementById('srAlert').textContent = "Export complete. Image downloaded.";
-    showToast("✅ Export complete — image downloaded.", "success");
-  } catch (e) {
-    console.error(e);
-    setError('Export failed. Try again.');
-    document.getElementById('srAlert').textContent = "Export failed.";
-    showToast("❌ Export failed. Try again.");
-  } finally {
-    exportBtn.disabled = false;
-    exportBtn.textContent = '⬆ Export Image';
-  }
-});
-addrInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') checkBtn.click(); });
-addrInput.placeholder = 'e.g. SP2J... (paste a Stacks address)';
 </script>
 </body>
 </html>
