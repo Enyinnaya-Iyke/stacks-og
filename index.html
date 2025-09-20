@@ -247,6 +247,11 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
 
   <div style="height:22px;"></div>
   <div class="muted" style="font-size:0.84rem; text-align:center;">Results are read-only — we never request wallet access. Data from Hiro Stacks API.</div>
+  <div id="srAlert" role="status" aria-live="polite" style="position:absolute; left:-9999px; height:1px; width:1px; overflow:hidden;"></div>
+  <div id="toast" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+ background:#222; color:#fff; padding:10px 16px; border-radius:10px;
+ font-size:0.9rem; opacity:0; pointer-events:none; transition:opacity 0.4s ease;">
+</div>
 </main>
 
 <script>
@@ -482,22 +487,51 @@ retryBtn.addEventListener('click', () => {
   addrInput.focus();
 });
 
+function showToast(message, type = "info", duration = 2500) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+
+  // color scheme
+  if (type === "success") {
+    toast.style.background = "rgba(0, 180, 80, 0.9)";
+  } else if (type === "error") {
+    toast.style.background = "rgba(200, 40, 40, 0.9)";
+  } else {
+    toast.style.background = "rgba(34,34,34,0.9)";
+  }
+
+  toast.style.opacity = '1';
+  setTimeout(() => {
+    toast.style.opacity = '0';
+  }, duration);
+}
+  
 /* Export image */
 exportBtn.addEventListener('click', async () => {
   exportBtn.disabled = true;
   exportBtn.textContent = 'Preparing…';
-  // clone card visually (to remove overlay if any) and export visually accurate result
-  try{
+  try {
     await html2canvas(resultCard, { backgroundColor: null, scale: window.devicePixelRatio || 2 }).then(canvas => {
       const link = document.createElement('a');
       link.download = `og-card-${Date.now()}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
-    });
-  }catch(e){
+
+      // feedback
+      // success
+      document.getElementById('srAlert').textContent = "Export complete. Image downloaded.";
+      showToast("✅ Export complete — image downloaded.", "success");
+
+      // error
+      document.getElementById('srAlert').textContent = "Export failed.";
+      showToast("❌ Export failed. Try again.", "error");
+          });
+  } catch (e) {
     console.error(e);
     setError('Export failed. Try again.');
-  }finally{
+    document.getElementById('srAlert').textContent = "Export failed.";
+    showToast("❌ Export failed. Try again.");
+  } finally {
     exportBtn.disabled = false;
     exportBtn.textContent = '⬆ Export Image';
   }
