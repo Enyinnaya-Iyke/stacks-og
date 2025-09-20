@@ -37,23 +37,47 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
   justify-content:center;
   padding:28px 18px 96px;
   overflow-x:hidden;
+  position:relative;
 }
-  /* Subtle grid background */
-  body::before {
+
+body::before {
   content:"";
   position:fixed;
   inset:0;
   background-image: radial-gradient(circle, rgba(255,255,255,0.02) 1px, transparent 1px);
   background-size: 50px 50px;
-  animation: moveBg 30s linear infinite;
+  animation: moveBg 40s linear infinite, pulse 6s ease-in-out infinite alternate;
   pointer-events:none;
   z-index:0;
 }
+
 @keyframes moveBg {
   0% { background-position: 0 0; }
   100% { background-position: 1000px 1000px; }
 }
 
+@keyframes pulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+  100% { opacity: 0.3; }
+}
+
+/* Optional streaks */
+body::after {
+  content:"";
+  position:fixed;
+  inset:0;
+  background: linear-gradient(120deg, rgba(255,255,255,0.05), transparent, rgba(255,255,255,0.05));
+  background-size: 200% 200%;
+  animation: streaks 12s linear infinite;
+  pointer-events:none;
+  z-index:0;
+}
+
+@keyframes streaks {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
   main{ width:100%; max-width:var(--maxw); display:flex; flex-direction:column; gap:18px; align-items:center; }
   /* Header / input area */
   .hero{
