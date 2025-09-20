@@ -429,18 +429,25 @@ setTimeout(() => {
   youDot.style.left = pct + '%';
   timelineProgress.style.width = pct + '%';
 }, 50);
-  // ranking: simulate using normalized position
-  const totalUsers = DEFAULT_TOTAL_USERS;
-  const rank = Math.max(1, Math.min(totalUsers, Math.round((posNormalized) * (totalUsers - 1)) + 1));
-  const before = rank - 1;
-  const after = totalUsers - rank;
-  // set ranking text
+  // send address + firstTxISO to server to get real rank & total
+try {
+  const resp = await fetch('/api/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address: addrInput.value.trim(), firstTxISO })
+  });
+  const data = await resp.json();
   function ordinal(n){
-  const s = ["th","st","nd","rd"], v = n % 100;
-  return n + (s[(v-20)%10] || s[v] || s[0]);
+    const s = ["th","st","nd","rd"], v = n % 100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+  }
+  rankBig.textContent = ordinal(data.rank);
+  rankSub.textContent = `out of ${data.total} users`;
+} catch(e) {
+  console.error('Ranking fetch failed', e);
+  rankBig.textContent = ordinal(1);
+  rankSub.textContent = `out of 1 users`;
 }
-rankBig.textContent = ordinal(rank);
-  rankSub.textContent = `out of ${totalUsers} users`;
   beforeAfter.textContent = `${before} before · ${after} after`;
   // subtle badge color / avatar change depending on score
   const score = computeScore(total);
