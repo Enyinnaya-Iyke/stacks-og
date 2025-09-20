@@ -178,25 +178,6 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
   @media (max-width:420px){
     :root{ --maxw: 380px; }
     .tx-count{ font-size:1.9rem; }
-
-    /* Draw-in animation for result card */
-@keyframes drawIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.6) translateY(40px);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.05) translateY(-10px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-.show-draw {
-  animation: drawIn 0.8s ease forwards;
-}
   }
 </style>
 </head>
@@ -265,12 +246,6 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
 
   <div style="height:22px;"></div>
   <div class="muted" style="font-size:0.84rem; text-align:center;">Results are read-only — we never request wallet access. Data from Hiro Stacks API.</div>
-
-  <!-- Second page container (hidden by default) -->
-<div id="resultPage" style="display:none; position:absolute; inset:0; background:var(--bg); padding:28px 18px; overflow:hidden;">
-  <div id="animatedCard" class="card" style="opacity:0; transform:scale(0.8); margin:auto; max-width:420px;"></div>
-</div>
-  
 </main>
 
 <script>
@@ -453,14 +428,9 @@ checkBtn.addEventListener('click', async () => {
 
 /* Retry button */
 retryBtn.addEventListener('click', () => {
-  // Hide second page
-  document.getElementById('resultPage').style.display = 'none';
-
-  // Show first page
-  document.querySelector('main').style.display = 'flex';
-
+  resultCard.classList.remove('show');
+  resultCard.classList.add('hidden');
   retryBtn.style.display = 'none';
-  addrInput.value = '';
   addrInput.focus();
 });
 
