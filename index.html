@@ -511,11 +511,20 @@ exportBtn.addEventListener('click', async () => {
   exportBtn.disabled = true;
   exportBtn.textContent = 'Preparing…';
   try {
-    const canvas = await html2canvas(resultCard, { backgroundColor: null, scale: window.devicePixelRatio || 2 });
+    // copy computed body background to card temporarily
+    const bodyBg = getComputedStyle(document.body).backgroundImage;
+    const originalBg = resultCard.style.background;
+    resultCard.style.background = bodyBg;
+
+    const canvas = await html2canvas(resultCard, { scale: window.devicePixelRatio || 2 });
     const link = document.createElement('a');
     link.download = `og-card-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
+
+    // restore original card background
+    resultCard.style.background = originalBg;
+
     document.getElementById('srAlert').textContent = "Export complete. Image downloaded.";
     showToast("✅ Export complete — image downloaded.", "success");
   } catch (e) {
