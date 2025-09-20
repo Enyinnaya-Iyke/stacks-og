@@ -1,119 +1,136 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>How OG are you on Stacks?</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Stacks OG Card</title>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
-    /* minimal styles, similar to previous version */
-    body { background:#0f1724; color:white; font-family: Arial, sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; padding:20px; }
-    .container { text-align:center; max-width:480px; }
-    input { width:100%; padding:12px; border-radius:6px; border:1px solid #555; margin-bottom:12px; font-size:1rem; }
-    button { padding:12px 24px; font-size:1rem; border:none; border-radius:6px; cursor:pointer; background:#7c5cff; color:#061123; }
-    button:disabled { opacity:0.6; cursor: not-allowed; }
-    .result { margin-top:24px; }
-    .badge { font-size:2rem; font-weight:bold; }
+    body {
+      background: #0d0d0d;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding-top: 40px;
+    }
+    .input-box {
+      margin-bottom: 20px;
+    }
+    .card {
+      background: #111;
+      border: 1px solid #00ff99;
+      border-radius: 12px;
+      padding: 20px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,255,153,0.3);
+    }
+    .avatar {
+      font-size: 50px;
+      margin: 10px 0;
+    }
+    .progress {
+      width: 100%;
+      height: 8px;
+      background: #222;
+      border-radius: 4px;
+      margin: 15px 0;
+      position: relative;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #00ff99;
+      border-radius: 4px;
+    }
+    .ranking {
+      margin: 20px 0;
+      font-size: 14px;
+      color: #ccc;
+    }
+    .btn {
+      background: #00ff99;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>How OG are you (Stacks)?</h1>
-    <input type="text" id="addrInput" placeholder="Enter your STX address, e.g. SP...">
-    <button id="checkBtn">CHECK</button>
-    <div class="result" id="resultDiv" style="display:none;">
-      <div class="badge" id="scoreBadge">--%</div>
-      <div id="scoreMsg"></div>
-      <div id="firstTx">OG since: --</div>
-    </div>
+
+<div class="input-box">
+  <input id="addrInput" placeholder="Enter your Stacks address" size="40">
+  <button onclick="checkOG()">CHECK</button>
+</div>
+
+<div id="resultCard" class="card" style="display:none;">
+  <h3>My OG Card</h3>
+  <div class="avatar">🐱</div>
+  <p id="txCount"></p>
+  <p id="firstTx"></p>
+  <div class="progress">
+    <div id="progressBar" class="progress-bar"></div>
   </div>
+  <div class="ranking" id="ranking"></div>
+  <button class="btn" onclick="exportImage()">⬆ Export Image</button>
+</div>
 
-  <script>
-    const apiBase = "https://api.hiro.so/extended/v1/address/";
-    const btn = document.getElementById("checkBtn");
-    const addrInput = document.getElementById("addrInput");
-    const resultDiv = document.getElementById("resultDiv");
-    const scoreBadge = document.getElementById("scoreBadge");
-    const scoreMsg = document.getElementById("scoreMsg");
-    const firstTxDiv = document.getElementById("firstTx");
+<script>
+async function checkOG() {
+  const addr = document.getElementById("addrInput").value.trim();
+  if (!addr) return alert("Enter a Stacks address");
 
-    async function fetchAllTx(address) {
-      const limit = 50;
-      let offset = 0;
-      let allTx = [];
-      let keepGoing = true;
+  // Fetch transactions from Stacks Hiro API
+  const url = `https://api.hiro.so/extended/v1/address/${addr}/transactions?limit=50`;
+  const res = await fetch(url);
+  const data = await res.json();
 
-      while (keepGoing) {
-        const url = `${apiBase}${address}/transactions_with_transfers?limit=${limit}&offset=${offset}`;
-        const resp = await fetch(url);
-        if (!resp.ok) {
-          throw new Error("Failed to fetch transactions");
-        }
-        const data = await resp.json();
-        const txs = data.results;
-        allTx = allTx.concat(txs);
+  const totalTx = data.total || 0;
+  const txs = data.results || [];
+  let firstTxDate = "N/A";
 
-        if (txs.length < limit) {
-          keepGoing = false;
-        } else {
-          offset += limit;
-          // Optional: stop early if you just need earliest tx + count up to some max
-        }
-      }
-      return allTx;
+  if (txs.length > 0) {
+    const lastPage = Math.ceil(totalTx / 50);
+    const oldestUrl = `https://api.hiro.so/extended/v1/address/${addr}/transactions?limit=1&offset=${totalTx-1}`;
+    const oldestRes = await fetch(oldestUrl);
+    const oldestData = await oldestRes.json();
+    if (oldestData.results.length > 0) {
+      const ts = oldestData.results[0].burn_block_time_iso;
+      firstTxDate = new Date(ts).toDateString();
     }
+  }
 
-    function computeScore(txCount) {
-      if (txCount >= 500) return 100;
-      if (txCount >= 200) return 80;
-      if (txCount >= 50) return 50;
-      if (txCount >= 10) return 20;
-      return 5;
-    }
+  // Simulated ranking
+  const totalUsers = 2197;
+  const yourRank = Math.floor(Math.random() * totalUsers) + 1;
+  const before = yourRank - 1;
+  const after = totalUsers - yourRank;
 
-    btn.addEventListener("click", async () => {
-      const address = addrInput.value.trim();
-      if (!address) return;
-      btn.disabled = true;
-      scoreMsg.textContent = "Loading...";
-      resultDiv.style.display = "block";
+  // Update UI
+  document.getElementById("txCount").textContent = `${totalTx} Transactions`;
+  document.getElementById("firstTx").textContent = `First tx: ${firstTxDate}`;
+  document.getElementById("progressBar").style.width = `${(yourRank / totalUsers) * 100}%`;
+  document.getElementById("ranking").textContent =
+    `Your Join Position ${yourRank}th out of ${totalUsers} users\n${before} before | ${after} after`;
 
-      try {
-        const txs = await fetchAllTx(address);
-        const txCount = txs.length;
+  document.getElementById("resultCard").style.display = "block";
+}
 
-        if (txCount === 0) {
-          scoreBadge.textContent = "0%";
-          scoreMsg.textContent = "No transactions found — brand new OG?";
-          firstTxDiv.textContent = "OG since: N/A";
-        } else {
-          // sort by block height or by timestamp
-          txs.sort((a, b) => {
-            // if timestamp available
-            const ta = new Date(a.parent_burn_header?.timestamp_iso || a.burn_block_time_iso || a.receipt_time_iso || a.burn_block_time || 0);
-            const tb = new Date(b.parent_burn_header?.timestamp_iso || b.burn_block_time_iso || b.receipt_time_iso || b.burn_block_time || 0);
-            return ta - tb;
-          });
-          const firstTx = txs[0];
-          const firstDate = firstTx.parent_burn_header?.timestamp_iso 
-                            || firstTx.burn_block_time_iso 
-                            || firstTx.receipt_time_iso 
-                            || firstTx.burn_block_time;
-          const dateStr = firstDate ? new Date(firstDate).toISOString().split('T')[0] : "Unknown";
+function exportImage() {
+  const card = document.getElementById("resultCard");
+  html2canvas(card).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "og-card.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  });
+}
+</script>
 
-          const score = computeScore(txCount);
-          scoreBadge.textContent = `${score}%`;
-          scoreMsg.textContent = `Based on ${txCount} transaction(s) on Stacks`;
-          firstTxDiv.textContent = `OG since: ${dateStr}`;
-        }
-      } catch (err) {
-        scoreMsg.textContent = "Error fetching data. Maybe address invalid or API issue.";
-        scoreBadge.textContent = "--%";
-        firstTxDiv.textContent = "OG since: --";
-        console.error(err);
-      }
-
-      btn.disabled = false;
-    });
-  </script>
 </body>
 </html>
