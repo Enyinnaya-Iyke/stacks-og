@@ -302,11 +302,11 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
 </div>
 </main>
 <script>
-/* Why: central app constants */
+/* Central app constants */
 const API_BASE = 'https://api.hiro.so/extended/v1/address/';
-const LAUNCH_DATE = new Date('2021-01-14T00:00:00Z'); // project/network launch baseline
-const DEFAULT_TOTAL_USERS = 2197; // for simulated ranking consistent with your screenshot
-/* DOM */
+const LAUNCH_DATE = new Date('2021-01-14T00:00:00Z'); // network launch baseline
+
+/* DOM elements */
 const addrInput = document.getElementById('addrInput');
 const checkBtn = document.getElementById('checkBtn');
 const resultCard = document.getElementById('resultCard');
@@ -321,18 +321,17 @@ const rankSub = document.getElementById('rankSub');
 const beforeAfter = document.getElementById('beforeAfter');
 const exportBtn = document.getElementById('exportBtn');
 const retryBtn = document.getElementById('retryBtn');
+
 /* Utilities */
 function isProbablyStacks(addr){
   if(!addr) return false;
-  return /^S[PT][0-9a-zA-Z]{10,40}$/.test(addr); // quick heuristic (SP or ST prefix)
+  return /^S[PT][0-9a-zA-Z]{10,40}$/.test(addr);
 }
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 function fmtDateISO(iso){
   try{ return new Date(iso).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});}catch(e){ return iso; }
 }
-/* Extract timestamp resiliently from tx object */
 function extractTimestamp(tx){
-  // prefer parent header ISO time, then burn_block_time_iso, then receipt_time_iso, fallback to block_time (unix)
   if(!tx) return null;
   if(tx.parent_burn_header && tx.parent_burn_header.timestamp_iso) return tx.parent_burn_header.timestamp_iso;
   if(tx.burn_block_time_iso) return tx.burn_block_time_iso;
@@ -340,7 +339,8 @@ function extractTimestamp(tx){
   if(tx.burn_block_time) return new Date(tx.burn_block_time * 1000).toISOString();
   return null;
 }
-  /* Fetch global chain data: first ever tx and latest tx */
+
+/* Fetch network first + latest tx */
 async function fetchGlobalTxRange() {
   const firstUrl = 'https://api.hiro.so/extended/v1/tx?limit=1&order_by=block_height.asc';
   const latestUrl = 'https://api.hiro.so/extended/v1/tx?limit=1&order_by=block_height.desc';
@@ -353,18 +353,15 @@ async function fetchGlobalTxRange() {
     nowISO: extractTimestamp(latestData.results[0]),
   };
 }
-/* Fetch minimal meta (total txs) and earliest tx efficiently */
+
+/* Fetch minimal user meta + earliest tx */
 async function fetchTxMetaAndFirst(address){
-  // 1: fetch minimal to get total
   const metaUrl = `${API_BASE}${encodeURIComponent(address)}/transactions?limit=1`;
   const metaResp = await fetch(metaUrl);
   if(!metaResp.ok) throw new Error('Failed to fetch transactions (meta).');
   const meta = await metaResp.json();
   const total = meta.total || 0;
-  if(total === 0){
-    return { total:0, firstTxISO: null };
-  }
-  // 2: fetch earliest tx (offset = total - 1)
+  if(total === 0) return { total:0, firstTxISO:null };
   const offset = Math.max(0, total - 1);
   const earliestUrl = `${API_BASE}${encodeURIComponent(address)}/transactions?limit=1&offset=${offset}`;
   const earliestResp = await fetch(earliestUrl);
@@ -374,19 +371,28 @@ async function fetchTxMetaAndFirst(address){
   const firstTxISO = extractTimestamp(txObj);
   return { total, firstTxISO };
 }
-/* Animation: count up numbers */
+
+/* Fetch total users dynamically */
+async function fetchTotalUsers() {
+  const res = await fetch('https://api.hiro.so/extended/v1/addresses?limit=1'); 
+  if(!res.ok) return 2000; // fallback
+  const data = await res.json();
+  return data.total || 2000;
+}
+
+/* Animate transaction count */
 function animateCount(el, from, to, ms=900){
   const start = performance.now();
   function step(now){
     const t = clamp((now - start)/ms, 0,1);
-    const val = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 2))); // ease-out
+    const val = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 2)));
     el.textContent = `${val} Transactions`;
     if(t < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
 }
-  
-/* Determine score tier (keeps previous mapping) */
+
+/* Score tiers */
 function computeScore(txCount){
   if(txCount >= 500) return 100;
   if(txCount >= 200) return 80;
@@ -401,97 +407,89 @@ function selectAvatar(score){
   if(score >= 20)  return { emoji: "😺", label: "Starter — finding your paws." };
   return { emoji: "🐾", label: "Newbie — just starting the journey." };
 }
+
 /* Render results */
-function renderCard({total, firstTxISO}){
-  // animate card in
+async function renderCard({total, firstTxISO}){
   resultCard.classList.remove('hidden');
   resultCard.classList.add('show');
-  // animate tx count
   animateCount(txCountEl, 0, total, 900);
-  // set first tx string
   const firstStr = firstTxISO ? fmtDateISO(firstTxISO) : 'N/A';
   firstTxEl.textContent = `First tx: ${firstStr}`;
-  // timeline position: normalized from LAUNCH_DATE to now
+
+  /* Timeline */
   const launchTime = new Date(window.globalLaunchISO).getTime();
-const nowTime = new Date(window.globalNowISO).getTime();
-let posNormalized = 0.5;
-if (firstTxISO) {
-  const userFirstTime = new Date(firstTxISO).getTime();
-  posNormalized = clamp((userFirstTime - launchTime) / (nowTime - launchTime), 0, 1);
-} else {
-  posNormalized = 1;
-}
+  const nowTime = new Date(window.globalNowISO).getTime();
+  let posNormalized = 1;
+  if(firstTxISO) {
+    const userFirstTime = new Date(firstTxISO).getTime();
+    posNormalized = clamp((userFirstTime - launchTime) / (nowTime - launchTime), 0, 1);
+  }
   const pct = posNormalized * 100;
-  // Reset to 0 first for animation
-youDot.style.left = '0%';
-timelineProgress.style.width = '0%';
-setTimeout(() => {
-  youDot.style.left = pct + '%';
-  timelineProgress.style.width = pct + '%';
-}, 50);
-  // ranking: simulate using normalized position
-  const totalUsers = DEFAULT_TOTAL_USERS;
-  const rank = Math.max(1, Math.min(totalUsers, Math.round((posNormalized) * (totalUsers - 1)) + 1));
+  youDot.style.left = '0%';
+  timelineProgress.style.width = '0%';
+  setTimeout(() => {
+    youDot.style.left = pct + '%';
+    timelineProgress.style.width = '100%'; // progress always goes to now
+  }, 50);
+
+  /* Ranking */
+  const totalUsers = await fetchTotalUsers();
+  const rank = Math.max(1, Math.min(totalUsers, Math.round(posNormalized * (totalUsers - 1)) + 1));
   const before = rank - 1;
   const after = totalUsers - rank;
-  // set ranking text
   function ordinal(n){
-  const s = ["th","st","nd","rd"], v = n % 100;
-  return n + (s[(v-20)%10] || s[v] || s[0]);
-}
-rankBig.textContent = ordinal(rank);
+    const s = ["th","st","nd","rd"], v = n % 100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+  }
+  rankBig.textContent = ordinal(rank);
   rankSub.textContent = `out of ${totalUsers} users`;
   beforeAfter.textContent = `${before} before · ${after} after`;
-  // subtle badge color / avatar change depending on score
+
+  /* Avatar */
   const score = computeScore(total);
-const avatarData = selectAvatar(score);
-const avatar = document.getElementById('avatar');
-const avatarLabel = document.getElementById('avatarLabel');
-avatar.textContent = avatarData.emoji;
-avatarLabel.textContent = avatarData.label;
-avatar.style.boxShadow = score >= 80
-  ? '0 10px 36px rgba(0,212,255,0.18)'
-  : '0 6px 18px rgba(0,255,130,0.06)';
-  // show retry button
+  const avatarData = selectAvatar(score);
+  const avatar = document.getElementById('avatar');
+  const avatarLabel = document.getElementById('avatarLabel');
+  avatar.textContent = avatarData.emoji;
+  avatarLabel.textContent = avatarData.label;
+  avatar.style.boxShadow = score >= 80
+    ? '0 10px 36px rgba(0,212,255,0.18)'
+    : '0 6px 18px rgba(0,255,130,0.06)';
+
   retryBtn.style.display = 'inline-block';
 }
-/* UI state helpers */
+
+/* UI helpers */
 function setLoading(on){
   overlay.style.display = on ? 'flex' : 'none';
   checkBtn.disabled = on;
   addrInput.disabled = on;
 }
-function setError(msg){
-  errorMsg.textContent = msg || '';
-}
+function setError(msg){ errorMsg.textContent = msg || ''; }
+
 /* Main flow */
 checkBtn.addEventListener('click', async () => {
   const addr = addrInput.value.trim();
   setError('');
-  // quick validation
   if(!isProbablyStacks(addr)){
     setError('Enter a valid STX address (starts with SP or ST).');
     return;
   }
-  // hide old results
   resultCard.classList.remove('show');
   resultCard.classList.add('hidden');
   setLoading(true);
   try {
-  // Fetch first + latest tx for the whole network
-  const globalRange = await fetchGlobalTxRange();
-  window.globalLaunchISO = globalRange.launchISO;
-  window.globalNowISO = globalRange.nowISO;
-  // Fetch user's data
-  const meta = await fetchTxMetaAndFirst(addr);
-  renderCard(meta);
-} catch (err) {
+    const globalRange = await fetchGlobalTxRange();
+    window.globalLaunchISO = globalRange.launchISO;
+    window.globalNowISO = globalRange.nowISO;
+    const meta = await fetchTxMetaAndFirst(addr);
+    await renderCard(meta);
+  } catch(err) {
     console.error(err);
     setError('Unable to fetch data. Try again later or check the address.');
-  } finally {
-    setLoading(false);
-  }
+  } finally { setLoading(false); }
 });
+
 /* Retry button */
 retryBtn.addEventListener('click', () => {
   resultCard.classList.remove('show');
@@ -499,29 +497,23 @@ retryBtn.addEventListener('click', () => {
   retryBtn.style.display = 'none';
   addrInput.focus();
 });
-function showToast(message, type = "info", duration = 2500) {
+
+/* Toast helper */
+function showToast(message, type = "info", duration = 2500){
   const toast = document.getElementById('toast');
   toast.textContent = message;
-  // color scheme
-  if (type === "success") {
-    toast.style.background = "rgba(0, 180, 80, 0.9)";
-  } else if (type === "error") {
-    toast.style.background = "rgba(200, 40, 40, 0.9)";
-  } else {
-    toast.style.background = "rgba(34,34,34,0.9)";
-  }
+  if(type === "success") toast.style.background = "rgba(0, 180, 80, 0.9)";
+  else if(type === "error") toast.style.background = "rgba(200, 40, 40, 0.9)";
+  else toast.style.background = "rgba(34,34,34,0.9)";
   toast.style.opacity = '1';
-  setTimeout(() => {
-    toast.style.opacity = '0';
-  }, duration);
+  setTimeout(()=>{ toast.style.opacity='0'; }, duration);
 }
 
-/* Export image - FIXED */
+/* Export */
 exportBtn.addEventListener('click', async () => {
   exportBtn.disabled = true;
   exportBtn.textContent = 'Preparing…';
   try {
-    // copy computed body background to card temporarily
     const bodyBg = getComputedStyle(document.body).backgroundImage;
     const originalBg = resultCard.style.background;
     resultCard.style.background = bodyBg;
@@ -531,13 +523,10 @@ exportBtn.addEventListener('click', async () => {
     link.download = `og-card-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-
-    // restore original card background
     resultCard.style.background = originalBg;
-
     document.getElementById('srAlert').textContent = "Export complete. Image downloaded.";
     showToast("✅ Export complete — image downloaded.", "success");
-  } catch (e) {
+  } catch(e) {
     console.error(e);
     setError('Export failed. Try again.');
     document.getElementById('srAlert').textContent = "Export failed.";
@@ -548,13 +537,9 @@ exportBtn.addEventListener('click', async () => {
   }
 });
 
-/* Allow Enter key to trigger */
-addrInput.addEventListener('keydown', (e) => {
-  if(e.key === 'Enter') checkBtn.click();
-});
+/* Enter key triggers check */
+addrInput.addEventListener('keydown', e => { if(e.key==='Enter') checkBtn.click(); });
 
-/* Prefill sample address for easy testing (optional) */
-addrInput.placeholder = 'e.g. SP2J... (paste a Stacks address)';
 </script>
 </body>
 </html>
