@@ -313,23 +313,7 @@ async function fetchTxMetaAndFirst(address){
   const firstTxISO = extractTimestamp(txObj);
   return { total, firstTxISO };
 }
-
-  // After fetchTxMetaAndFirst(addr) returns meta
-const resp = await fetch('/api/track', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    address: addr,
-    firstTxISO: meta.firstTxISO,
-  }),
-})
-const stats = await resp.json()
-
-// Replace simulated ranking with server data
-rankBig.textContent = stats.rank + 'th'
-rankSub.textContent = `out of ${stats.total} users`
-beforeAfter.textContent = `${stats.before} before · ${stats.after} after`
-
+  
 /* Animation: count up numbers */
 function animateCount(el, from, to, ms=900){
   const start = performance.now();
