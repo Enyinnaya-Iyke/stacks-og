@@ -343,10 +343,6 @@ function animateCount(el, from, to, ms=900){
   requestAnimationFrame(step);
 }
 
-  timelineProgress.style.width = '0%';
-requestAnimationFrame(() => {
-  timelineProgress.style.width = pct + '%';
-});
   
 /* Determine score tier (keeps previous mapping) */
 function computeScore(txCount){
