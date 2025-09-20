@@ -429,66 +429,30 @@ setTimeout(() => {
   youDot.style.left = pct + '%';
   timelineProgress.style.width = pct + '%';
 }, 50);
-  // send address + firstTxISO to server to get real rank & total
-try {
-  async function renderCard({total, firstTxISO}){
-  // animate card in
-  resultCard.classList.remove('hidden');
-  resultCard.classList.add('show');
-
-  // animate tx count
-  animateCount(txCountEl, 0, total, 900);
-
-  // first tx
-  const firstStr = firstTxISO ? fmtDateISO(firstTxISO) : 'N/A';
-  firstTxEl.textContent = `First tx: ${firstStr}`;
-
-  // timeline
-  const launchTime = new Date(window.globalLaunchISO).getTime();
-  const nowTime = new Date(window.globalNowISO).getTime();
-  let posNormalized = 0.5;
-  if(firstTxISO){
-    const userFirstTime = new Date(firstTxISO).getTime();
-    posNormalized = clamp((userFirstTime - launchTime)/(nowTime - launchTime), 0,1);
-  } else {
-    posNormalized = 1;
-  }
-  const pct = posNormalized*100;
-  youDot.style.left = '0%';
-  timelineProgress.style.width = '0%';
-  setTimeout(()=>{
-    youDot.style.left = pct+'%';
-    timelineProgress.style.width = pct+'%';
-  },50);
-
-  // fetch rank
-  try {
-    const resp = await fetch('/api/submit', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({address: addrInput.value.trim(), firstTxISO})
-    });
-    const data = await resp.json();
-    function ordinal(n){ const s=["th","st","nd","rd"], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
-    rankBig.textContent = ordinal(data.rank);
-    rankSub.textContent = `out of ${data.total} users`;
-  } catch(e){
-    console.error('Ranking fetch failed', e);
-    rankBig.textContent = '1st';
-    rankSub.textContent = 'out of 1 users';
-  }
-
-  // avatar
+  // ranking: simulate using normalized position
+  const totalUsers = DEFAULT_TOTAL_USERS;
+  const rank = Math.max(1, Math.min(totalUsers, Math.round((posNormalized) * (totalUsers - 1)) + 1));
+  const before = rank - 1;
+  const after = totalUsers - rank;
+  // set ranking text
+  function ordinal(n){
+  const s = ["th","st","nd","rd"], v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+rankBig.textContent = ordinal(rank);
+  rankSub.textContent = `out of ${totalUsers} users`;
+  beforeAfter.textContent = `${before} before · ${after} after`;
+  // subtle badge color / avatar change depending on score
   const score = computeScore(total);
-  const avatarData = selectAvatar(score);
-  const avatar = document.getElementById('avatar');
-  const avatarLabel = document.getElementById('avatarLabel');
-  avatar.textContent = avatarData.emoji;
-  avatarLabel.textContent = avatarData.label;
-  avatar.style.boxShadow = score >= 80
-    ? '0 10px 36px rgba(0,212,255,0.18)'
-    : '0 6px 18px rgba(0,255,130,0.06)';
-
+const avatarData = selectAvatar(score);
+const avatar = document.getElementById('avatar');
+const avatarLabel = document.getElementById('avatarLabel');
+avatar.textContent = avatarData.emoji;
+avatarLabel.textContent = avatarData.label;
+avatar.style.boxShadow = score >= 80
+  ? '0 10px 36px rgba(0,212,255,0.18)'
+  : '0 6px 18px rgba(0,255,130,0.06)';
+  // show retry button
   retryBtn.style.display = 'inline-block';
 }
 /* UI state helpers */
