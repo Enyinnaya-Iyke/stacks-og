@@ -440,25 +440,19 @@ function showToast(message, type = "info", duration = 2500) {
     toast.style.opacity = '0';
   }, duration);
 }
-  
-/* Export image */
+
+/* Export image - FIXED */
 exportBtn.addEventListener('click', async () => {
   exportBtn.disabled = true;
   exportBtn.textContent = 'Preparing…';
   try {
-    await html2canvas(resultCard, { backgroundColor: null, scale: window.devicePixelRatio || 2 }).then(canvas => {
-      const link = document.createElement('a');
-      link.download = `og-card-${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      // feedback
-      // success
-      document.getElementById('srAlert').textContent = "Export complete. Image downloaded.";
-      showToast("✅ Export complete — image downloaded.", "success");
-      // error
-      document.getElementById('srAlert').textContent = "Export failed.";
-      showToast("❌ Export failed. Try again.", "error");
-          });
+    const canvas = await html2canvas(resultCard, { backgroundColor: null, scale: window.devicePixelRatio || 2 });
+    const link = document.createElement('a');
+    link.download = `og-card-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    document.getElementById('srAlert').textContent = "Export complete. Image downloaded.";
+    showToast("✅ Export complete — image downloaded.", "success");
   } catch (e) {
     console.error(e);
     setError('Export failed. Try again.');
@@ -469,10 +463,12 @@ exportBtn.addEventListener('click', async () => {
     exportBtn.textContent = '⬆ Export Image';
   }
 });
+
 /* Allow Enter key to trigger */
 addrInput.addEventListener('keydown', (e) => {
   if(e.key === 'Enter') checkBtn.click();
 });
+
 /* Prefill sample address for easy testing (optional) */
 addrInput.placeholder = 'e.g. SP2J... (paste a Stacks address)';
 </script>
