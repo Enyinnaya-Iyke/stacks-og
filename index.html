@@ -302,11 +302,11 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
 </div>
 </main>
 <script>
-/* Central app constants */
+/* Why: central app constants */
 const API_BASE = 'https://api.hiro.so/extended/v1/address/';
-const LAUNCH_DATE = new Date('2021-01-14T00:00:00Z'); // network launch baseline
+const LAUNCH_DATE = new Date('2021-01-14T00:00:00Z'); // project/network launch baseline
 
-/* DOM elements */
+/* DOM */
 const addrInput = document.getElementById('addrInput');
 const checkBtn = document.getElementById('checkBtn');
 const resultCard = document.getElementById('resultCard');
@@ -325,7 +325,7 @@ const retryBtn = document.getElementById('retryBtn');
 /* Utilities */
 function isProbablyStacks(addr){
   if(!addr) return false;
-  return /^S[PT][0-9a-zA-Z]{10,40}$/.test(addr);
+  return /^S[PT][0-9a-zA-Z]{10,40}$/.test(addr); // quick heuristic
 }
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 function fmtDateISO(iso){
@@ -340,7 +340,7 @@ function extractTimestamp(tx){
   return null;
 }
 
-/* Fetch network first + latest tx */
+/* Fetch global chain data: first ever tx and latest tx */
 async function fetchGlobalTxRange() {
   const firstUrl = 'https://api.hiro.so/extended/v1/tx?limit=1&order_by=block_height.asc';
   const latestUrl = 'https://api.hiro.so/extended/v1/tx?limit=1&order_by=block_height.desc';
@@ -354,14 +354,16 @@ async function fetchGlobalTxRange() {
   };
 }
 
-/* Fetch minimal user meta + earliest tx */
+/* Fetch minimal meta (total txs) and earliest tx efficiently */
 async function fetchTxMetaAndFirst(address){
   const metaUrl = `${API_BASE}${encodeURIComponent(address)}/transactions?limit=1`;
   const metaResp = await fetch(metaUrl);
   if(!metaResp.ok) throw new Error('Failed to fetch transactions (meta).');
   const meta = await metaResp.json();
   const total = meta.total || 0;
-  if(total === 0) return { total:0, firstTxISO:null };
+  if(total === 0){
+    return { total:0, firstTxISO: null };
+  }
   const offset = Math.max(0, total - 1);
   const earliestUrl = `${API_BASE}${encodeURIComponent(address)}/transactions?limit=1&offset=${offset}`;
   const earliestResp = await fetch(earliestUrl);
@@ -374,32 +376,38 @@ async function fetchTxMetaAndFirst(address){
 
 /* Fetch total users dynamically */
 async function fetchTotalUsers() {
-  const res = await fetch('https://api.hiro.so/extended/v1/addresses?limit=1'); 
-  if(!res.ok) return 2000; // fallback
-  const data = await res.json();
-  return data.total || 2000;
+  try {
+    const res = await fetch('https://api.hiro.so/extended/v1/addresses?limit=1'); 
+    if(!res.ok) throw new Error('Failed to fetch total users');
+    const data = await res.json();
+    return data.total; 
+  } catch(e) {
+    console.warn('Could not fetch total users:', e);
+    return null; 
+  }
 }
 
-/* Animate transaction count */
+/* Animation: count up numbers */
 function animateCount(el, from, to, ms=900){
   const start = performance.now();
   function step(now){
     const t = clamp((now - start)/ms, 0,1);
-    const val = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 2)));
+    const val = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 2))); 
     el.textContent = `${val} Transactions`;
     if(t < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
 }
 
-/* Score tiers */
+/* Determine score tier */
 function computeScore(txCount){
-  if(txCount >= 500) return 100;
-  if(txCount >= 200) return 80;
-  if(txCount >= 50) return 50;
-  if(txCount >= 10) return 20;
+  if(txCount >= 5000) return 100;
+  if(txCount >= 2000) return 80;
+  if(txCount >= 500) return 50;
+  if(txCount >= 100) return 20;
   return 5;
 }
+
 function selectAvatar(score){
   if(score >= 100) return { emoji: "🦁", label: "Apex OG — top of the chain!" };
   if(score >= 80)  return { emoji: "🐯", label: "Elite OG — fierce and early." };
@@ -412,40 +420,48 @@ function selectAvatar(score){
 async function renderCard({total, firstTxISO}){
   resultCard.classList.remove('hidden');
   resultCard.classList.add('show');
+
   animateCount(txCountEl, 0, total, 900);
+
   const firstStr = firstTxISO ? fmtDateISO(firstTxISO) : 'N/A';
   firstTxEl.textContent = `First tx: ${firstStr}`;
 
-  /* Timeline */
   const launchTime = new Date(window.globalLaunchISO).getTime();
   const nowTime = new Date(window.globalNowISO).getTime();
-  let posNormalized = 1;
-  if(firstTxISO) {
+  let posNormalized = 0.5;
+  if (firstTxISO) {
     const userFirstTime = new Date(firstTxISO).getTime();
     posNormalized = clamp((userFirstTime - launchTime) / (nowTime - launchTime), 0, 1);
+  } else {
+    posNormalized = 1;
   }
+
   const pct = posNormalized * 100;
   youDot.style.left = '0%';
   timelineProgress.style.width = '0%';
   setTimeout(() => {
     youDot.style.left = pct + '%';
-    timelineProgress.style.width = '100%'; // progress always goes to now
+    timelineProgress.style.width = pct + '%';
   }, 50);
 
-  /* Ranking */
   const totalUsers = await fetchTotalUsers();
-  const rank = Math.max(1, Math.min(totalUsers, Math.round(posNormalized * (totalUsers - 1)) + 1));
-  const before = rank - 1;
-  const after = totalUsers - rank;
-  function ordinal(n){
-    const s = ["th","st","nd","rd"], v = n % 100;
-    return n + (s[(v-20)%10] || s[v] || s[0]);
+  if(totalUsers){
+    const rank = Math.max(1, Math.min(totalUsers, Math.round(posNormalized * (totalUsers - 1)) + 1));
+    const before = rank - 1;
+    const after = totalUsers - rank;
+    function ordinal(n){
+      const s = ["th","st","nd","rd"], v = n % 100;
+      return n + (s[(v-20)%10] || s[v] || s[0]);
+    }
+    rankBig.textContent = ordinal(rank);
+    rankSub.textContent = `out of ${totalUsers} users`;
+    beforeAfter.textContent = `${before} before · ${after} after`;
+  } else {
+    rankBig.textContent = '—';
+    rankSub.textContent = 'out of — users';
+    beforeAfter.textContent = '';
   }
-  rankBig.textContent = ordinal(rank);
-  rankSub.textContent = `out of ${totalUsers} users`;
-  beforeAfter.textContent = `${before} before · ${after} after`;
 
-  /* Avatar */
   const score = computeScore(total);
   const avatarData = selectAvatar(score);
   const avatar = document.getElementById('avatar');
@@ -465,7 +481,9 @@ function setLoading(on){
   checkBtn.disabled = on;
   addrInput.disabled = on;
 }
-function setError(msg){ errorMsg.textContent = msg || ''; }
+function setError(msg){
+  errorMsg.textContent = msg || '';
+}
 
 /* Main flow */
 checkBtn.addEventListener('click', async () => {
@@ -482,15 +500,18 @@ checkBtn.addEventListener('click', async () => {
     const globalRange = await fetchGlobalTxRange();
     window.globalLaunchISO = globalRange.launchISO;
     window.globalNowISO = globalRange.nowISO;
+
     const meta = await fetchTxMetaAndFirst(addr);
     await renderCard(meta);
-  } catch(err) {
+  } catch (err) {
     console.error(err);
     setError('Unable to fetch data. Try again later or check the address.');
-  } finally { setLoading(false); }
+  } finally {
+    setLoading(false);
+  }
 });
 
-/* Retry button */
+/* Retry */
 retryBtn.addEventListener('click', () => {
   resultCard.classList.remove('show');
   resultCard.classList.add('hidden');
@@ -498,15 +519,15 @@ retryBtn.addEventListener('click', () => {
   addrInput.focus();
 });
 
-/* Toast helper */
-function showToast(message, type = "info", duration = 2500){
+/* Toast */
+function showToast(message, type = "info", duration = 2500) {
   const toast = document.getElementById('toast');
   toast.textContent = message;
-  if(type === "success") toast.style.background = "rgba(0, 180, 80, 0.9)";
-  else if(type === "error") toast.style.background = "rgba(200, 40, 40, 0.9)";
+  if (type === "success") toast.style.background = "rgba(0, 180, 80, 0.9)";
+  else if (type === "error") toast.style.background = "rgba(200, 40, 40, 0.9)";
   else toast.style.background = "rgba(34,34,34,0.9)";
   toast.style.opacity = '1';
-  setTimeout(()=>{ toast.style.opacity='0'; }, duration);
+  setTimeout(() => { toast.style.opacity = '0'; }, duration);
 }
 
 /* Export */
@@ -523,10 +544,11 @@ exportBtn.addEventListener('click', async () => {
     link.download = `og-card-${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
+
     resultCard.style.background = originalBg;
     document.getElementById('srAlert').textContent = "Export complete. Image downloaded.";
     showToast("✅ Export complete — image downloaded.", "success");
-  } catch(e) {
+  } catch (e) {
     console.error(e);
     setError('Export failed. Try again.');
     document.getElementById('srAlert').textContent = "Export failed.";
@@ -537,9 +559,12 @@ exportBtn.addEventListener('click', async () => {
   }
 });
 
-/* Enter key triggers check */
-addrInput.addEventListener('keydown', e => { if(e.key==='Enter') checkBtn.click(); });
+/* Enter key */
+addrInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') checkBtn.click();
+});
 
+addrInput.placeholder = 'e.g. SP2J... (paste a Stacks address)';
 </script>
 </body>
 </html>
