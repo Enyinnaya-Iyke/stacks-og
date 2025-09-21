@@ -304,6 +304,7 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
 <script>
 window.localUserCount = 0; // total addresses entered
 window.enteredAddresses = new Set(); // to avoid counting duplicates
+window.enteredAddresses = new Map();
 /* Central app constants */
 const API_BASE = 'https://api.hiro.so/extended/v1/address/';
 const LAUNCH_DATE = new Date('2021-01-14T00:00:00Z'); // network launch baseline
@@ -374,15 +375,6 @@ async function fetchTxMetaAndFirst(address){
   return { total, firstTxISO };
 }
 
-/* Fetch total users dynamically */
-async function fetchTotalUsers(address) {
-  if(address && !window.enteredAddresses.has(address)) {
-    window.enteredAddresses.add(address);
-    window.localUserCount++;
-  }
-  return window.localUserCount;
-}
-
 /* Animate transaction count */
 function animateCount(el, from, to, ms=900){
   const start = performance.now();
@@ -436,10 +428,23 @@ async function renderCard({total, firstTxISO}){
   }, 50);
 
   /* Ranking */
-  const totalUsers = await fetchTotalUsers(addrInput.value.trim());
-  const rank = Math.max(1, Math.min(totalUsers, Math.round(posNormalized * (totalUsers - 1)) + 1));
-  const before = rank - 1;
-  const after = totalUsers - rank;
+  // Add current user to the global map
+window.enteredAddresses.set(addrInput.value.trim(), firstTxISO || new Date().toISOString());
+
+// Sort addresses by firstTxISO
+const sortedAddresses = Array.from(window.enteredAddresses.entries())
+  .sort((a,b) => new Date(a[1]) - new Date(b[1]));
+
+// Find current rank
+const rank = sortedAddresses.findIndex(([a,_]) => a === addrInput.value.trim()) + 1;
+const totalUsers = window.enteredAddresses.size;
+const before = rank - 1;
+const after = totalUsers - rank;
+
+// Update UI
+rankBig.textContent = ordinal(rank);
+rankSub.textContent = `out of ${totalUsers} users`;
+beforeAfter.textContent = `${before} before · ${after} after`;
   function ordinal(n){
     const s = ["th","st","nd","rd"], v = n % 100;
     return n + (s[(v-20)%10] || s[v] || s[0]);
