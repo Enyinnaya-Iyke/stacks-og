@@ -250,49 +250,55 @@ Self-contained single-file app. Drop into any static host (Vercel/GitHub Pages).
   </div>
   <div id="errorMsg" class="muted" role="status" aria-live="polite" style="height:18px;"></div>
   <!-- Result card -->
-  <div id="resultCard" class="card hidden" aria-live="polite" style="position:relative;">
-    <div id="overlay" class="overlay" style="display:none;">
-      <div style="text-align:center;">
-        <div class="spinner" role="status" aria-label="Loading"></div>
-        <div style="height:8px"></div>
-        <div class="muted">Fetching chain data…</div>
-      </div>
-    </div>
-    <div class="card-head">
-      <div>
-        <div class="card-title">My OG Card</div>
-        <div class="muted" style="font-size:0.82rem; margin-top:2px;">https://stacks-og.vercel.app/</div>
-      </div>
-      <div class="avatar bounce" id="avatar" title="OG avatar" aria-hidden="true">🐱</div>
-    </div>
-    <div style="margin-top:10px;">
-      <div id="txCount" class="tx-count">-- Transactions</div>
-      <div id="firstTx" class="first-tx">First tx: --</div>
-      <div class="timeline-wrap">
-        <div class="timeline" id="timeline">
-          <div class="timeline-progress" id="timelineProgress"></div>
-          <div class="dot" style="left:0%;"></div>
-          <div class="you-dot" id="youDot" style="left:12%;"></div>
-          <div class="dot" style="left:100%; transform:translateX(-100%);"></div>
-        </div>
-        <div class="timeline-labels">
-          <div>Launch</div>
-          <div class="muted">You</div>
-          <div>Now</div>
+  <!-- Result card with ElectricBorder wrapper -->
+<div id="resultCardWrapper" class="hidden" style="position:relative;">
+  <div id="resultCardElectric" class="electric-border" style="--electric-border-color:#7df9ff; --eb-border-width:2px; border-radius:16px;">
+    <div id="resultCard" class="card" aria-live="polite" style="position:relative;">
+      <div id="overlay" class="overlay" style="display:none;">
+        <div style="text-align:center;">
+          <div class="spinner" role="status" aria-label="Loading"></div>
+          <div style="height:8px"></div>
+          <div class="muted">Fetching chain data…</div>
         </div>
       </div>
-      <div class="ranking">
-        <div class="rank-big" id="rankBig">—</div>
-        <div class="rank-sub" id="rankSub">out of — users</div>
-        <div class="muted" id="beforeAfter" style="font-size:0.9rem;"></div>
-        <div class="muted" id="avatarLabel" style="font-size:0.92rem; margin-top:10px;"></div>
+      <div class="card-head">
+        <div>
+          <div class="card-title">My OG Card</div>
+          <div class="muted" style="font-size:0.82rem; margin-top:2px;">https://stacks-og.vercel.app/</div>
+        </div>
+        <div class="avatar bounce" id="avatar" title="OG avatar" aria-hidden="true">🐱</div>
       </div>
-      <div class="export-wrap">
-        <button id="exportBtn" class="btn-export">⬆ Export Image</button>
-        <button id="retryBtn" class="muted-btn" style="display:none;">Try another</button>
+      <div style="margin-top:10px;">
+        <div id="txCount" class="tx-count">-- Transactions</div>
+        <div id="firstTx" class="first-tx">First tx: --</div>
+        <div class="timeline-wrap">
+          <div class="timeline" id="timeline">
+            <div class="timeline-progress" id="timelineProgress"></div>
+            <div class="dot" style="left:0%;"></div>
+            <div class="you-dot" id="youDot" style="left:12%;"></div>
+            <div class="dot" style="left:100%; transform:translateX(-100%);"></div>
+          </div>
+          <div class="timeline-labels">
+            <div>Launch</div>
+            <div class="muted">You</div>
+            <div>Now</div>
+          </div>
+        </div>
+        <div class="ranking">
+          <div class="rank-big" id="rankBig">—</div>
+          <div class="rank-sub" id="rankSub">out of — users</div>
+          <div class="muted" id="beforeAfter" style="font-size:0.9rem;"></div>
+          <div class="muted" id="avatarLabel" style="font-size:0.92rem; margin-top:10px;"></div>
+        </div>
+        <div class="export-wrap">
+          <button id="exportBtn" class="btn-export">⬆ Export Image</button>
+          <button id="retryBtn" class="muted-btn" style="display:none;">Try another</button>
+        </div>
       </div>
     </div>
   </div>
+</div>
+
   <div style="height:22px;"></div>
   <div class="muted" style="font-size:0.84rem; text-align:center;">Results are read-only — we never request wallet access. Data from Hiro Stacks API.</div>
   <div id="srAlert" role="status" aria-live="polite" style="position:absolute; left:-9999px; height:1px; width:1px; overflow:hidden;"></div>
